@@ -1,9 +1,22 @@
 package com.example.mycal.data.local.entity
 
 import androidx.room.Entity
+import androidx.room.ForeignKey
+import androidx.room.Index
 import androidx.room.PrimaryKey
 
-@Entity(tableName = "events")
+@Entity(
+    tableName = "events",
+    foreignKeys = [
+        ForeignKey(
+            entity = CalendarSourceEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["sourceId"],
+            onDelete = ForeignKey.CASCADE
+        )
+    ],
+    indices = [Index(value = ["sourceId"])]
+)
 data class EventEntity(
     @PrimaryKey
     val id: String,

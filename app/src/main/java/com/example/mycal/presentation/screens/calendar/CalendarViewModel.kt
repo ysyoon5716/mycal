@@ -9,6 +9,7 @@ import com.example.mycal.domain.usecase.GetMonthEventsUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import org.threeten.bp.LocalDate
 import org.threeten.bp.YearMonth
 import javax.inject.Inject
@@ -96,37 +97,63 @@ class CalendarViewModel @Inject constructor(
             }
 
             try {
-                getMonthEventsUseCase(yearMonth.year, yearMonth.monthValue)
-                    .collect { events ->
-                        val calendarDates = generateCalendarDates(yearMonth, events)
+                // Add timeout to prevent infinite waiting
+                withTimeoutOrNull(5000L) {
+                    getMonthEventsUseCase(yearMonth.year, yearMonth.monthValue)
+                        .collect { events ->
+                            val calendarDates = generateCalendarDates(yearMonth, events)
 
-                        // Cache the data
-                        monthDataCache[yearMonth] = calendarDates
+                            // Cache the data
+                            monthDataCache[yearMonth] = calendarDates
 
-                        // Update UI state
-                        if (yearMonth == _uiState.value.currentMonth) {
-                            _uiState.update {
-                                it.copy(
-                                    calendarDates = calendarDates,
-                                    events = events,
-                                    monthDataMap = monthDataCache.toMap(),
-                                    isLoading = false,
-                                    error = null
-                                )
-                            }
-                        } else {
-                            // Just update the cache in UI state
-                            _uiState.update {
-                                it.copy(
-                                    monthDataMap = monthDataCache.toMap()
-                                )
+                            // Update UI state
+                            if (yearMonth == _uiState.value.currentMonth) {
+                                _uiState.update {
+                                    it.copy(
+                                        calendarDates = calendarDates,
+                                        events = events,
+                                        monthDataMap = monthDataCache.toMap(),
+                                        isLoading = false,
+                                        error = null
+                                    )
+                                }
+                            } else {
+                                // Just update the cache in UI state
+                                _uiState.update {
+                                    it.copy(
+                                        monthDataMap = monthDataCache.toMap()
+                                    )
+                                }
                             }
                         }
+                } ?: run {
+                    // Timeout occurred, load empty calendar
+                    val calendarDates = generateCalendarDates(yearMonth, emptyList())
+                    monthDataCache[yearMonth] = calendarDates
+
+                    if (yearMonth == _uiState.value.currentMonth) {
+                        _uiState.update {
+                            it.copy(
+                                calendarDates = calendarDates,
+                                events = emptyList(),
+                                monthDataMap = monthDataCache.toMap(),
+                                isLoading = false,
+                                error = null
+                            )
+                        }
                     }
+                }
             } catch (e: Exception) {
+                // On error, show empty calendar
+                val calendarDates = generateCalendarDates(yearMonth, emptyList())
+                monthDataCache[yearMonth] = calendarDates
+
                 if (yearMonth == _uiState.value.currentMonth) {
                     _uiState.update {
                         it.copy(
+                            calendarDates = calendarDates,
+                            events = emptyList(),
+                            monthDataMap = monthDataCache.toMap(),
                             isLoading = false,
                             error = e.message
                         )

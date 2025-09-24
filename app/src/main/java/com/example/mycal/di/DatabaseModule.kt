@@ -2,6 +2,7 @@ package com.example.mycal.di
 
 import android.content.Context
 import androidx.room.Room
+import com.example.mycal.data.local.dao.CalendarSourceDao
 import com.example.mycal.data.local.dao.EventDao
 import com.example.mycal.data.local.database.CalendarDatabase
 import dagger.Module
@@ -24,12 +25,20 @@ object DatabaseModule {
             context,
             CalendarDatabase::class.java,
             "calendar_database"
-        ).build()
+        )
+            .fallbackToDestructiveMigration()
+            .build()
     }
 
     @Provides
     @Singleton
     fun provideEventDao(database: CalendarDatabase): EventDao {
         return database.eventDao()
+    }
+
+    @Provides
+    @Singleton
+    fun provideCalendarSourceDao(database: CalendarDatabase): CalendarSourceDao {
+        return database.calendarSourceDao()
     }
 }

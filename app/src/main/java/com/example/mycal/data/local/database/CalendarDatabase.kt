@@ -2,6 +2,7 @@ package com.example.mycal.data.local.database
 
 import androidx.room.Database
 import androidx.room.RoomDatabase
+import com.example.mycal.data.local.dao.CalendarSourceDao
 import com.example.mycal.data.local.dao.EventDao
 import com.example.mycal.data.local.entity.CalendarSourceEntity
 import com.example.mycal.data.local.entity.EventEntity
@@ -13,4 +14,5 @@ import com.example.mycal.data.local.entity.EventEntity
 )
 abstract class CalendarDatabase : RoomDatabase() {
     abstract fun eventDao(): EventDao
+    abstract fun calendarSourceDao(): CalendarSourceDao
 }

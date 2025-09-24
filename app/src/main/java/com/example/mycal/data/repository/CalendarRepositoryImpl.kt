@@ -6,6 +6,7 @@ import com.example.mycal.domain.model.CalendarEvent
 import com.example.mycal.domain.repository.CalendarRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onStart
 import org.threeten.bp.LocalDate
 import org.threeten.bp.LocalTime
 import org.threeten.bp.ZoneId
@@ -45,6 +46,10 @@ class CalendarRepositoryImpl @Inject constructor(
         return eventDao.getEventsInRange(startTime, endTime)
             .map { entities ->
                 entities.map { EventMapper.toDomain(it) }
+            }
+            .onStart {
+                // Emit empty list immediately to ensure Flow starts
+                emit(emptyList())
             }
     }
 

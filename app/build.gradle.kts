@@ -12,7 +12,7 @@ android {
 
     defaultConfig {
         applicationId = "com.example.mycal"
-        minSdk = 24
+        minSdk = 26
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
@@ -41,6 +41,15 @@ android {
     }
     composeOptions {
         kotlinCompilerExtensionVersion = "1.5.4"
+    }
+    packaging {
+        resources {
+            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+            excludes += "/META-INF/groovy/**"
+            excludes += "/META-INF/groovy-release-info.properties"
+            excludes += "/META-INF/INDEX.LIST"
+            excludes += "/META-INF/MANIFEST.MF"
+        }
     }
 }
 
@@ -79,6 +88,20 @@ dependencies {
 
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
+
+    // ICS Parsing
+    implementation("org.mnode.ical4j:ical4j:3.2.14")
+
+    // Network
+    implementation("com.squareup.retrofit2:retrofit:2.9.0")
+    implementation("com.squareup.retrofit2:converter-scalars:2.9.0")
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
+
+    // WorkManager for background sync
+    implementation("androidx.work:work-runtime-ktx:2.9.0")
+    implementation("androidx.hilt:hilt-work:1.1.0")
+    ksp("androidx.hilt:hilt-compiler:1.1.0")
 
     // Debug
     debugImplementation("androidx.compose.ui:ui-tooling")

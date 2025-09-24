@@ -9,6 +9,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -31,6 +32,7 @@ import java.util.Locale
 @Composable
 fun CalendarScreen(
     modifier: Modifier = Modifier,
+    onNavigateToSubscriptions: () -> Unit = {},
     viewModel: CalendarViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -42,7 +44,8 @@ fun CalendarScreen(
                 currentMonth = uiState.currentMonth.format(DateTimeFormatter.ofPattern("MMMM yyyy")),
                 onPreviousMonth = viewModel::navigateToPreviousMonth,
                 onNextMonth = viewModel::navigateToNextMonth,
-                onTodayClick = viewModel::navigateToToday
+                onTodayClick = viewModel::navigateToToday,
+                onSubscriptionsClick = onNavigateToSubscriptions
             )
         }
     ) { paddingValues ->
@@ -116,7 +119,8 @@ fun CalendarTopBar(
     currentMonth: String,
     onPreviousMonth: () -> Unit,
     onNextMonth: () -> Unit,
-    onTodayClick: () -> Unit
+    onTodayClick: () -> Unit,
+    onSubscriptionsClick: () -> Unit
 ) {
     TopAppBar(
         title = {
@@ -153,6 +157,12 @@ fun CalendarTopBar(
                 Icon(
                     imageVector = Icons.Default.DateRange,
                     contentDescription = "Go to today"
+                )
+            }
+            IconButton(onClick = onSubscriptionsClick) {
+                Icon(
+                    imageVector = Icons.Default.Settings,
+                    contentDescription = "Calendar Subscriptions"
                 )
             }
         }
