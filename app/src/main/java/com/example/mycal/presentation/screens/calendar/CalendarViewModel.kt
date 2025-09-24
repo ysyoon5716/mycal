@@ -1,31 +1,58 @@
 package com.example.mycal.presentation.screens.calendar
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.mycal.domain.model.CalendarDate
 import com.example.mycal.domain.model.CalendarEvent
 import com.example.mycal.domain.model.CalendarViewMode
 import com.example.mycal.domain.usecase.GetMonthEventsUseCase
+import com.example.mycal.data.local.dao.EventDao
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.coroutines.Job
 import org.threeten.bp.LocalDate
 import org.threeten.bp.YearMonth
 import javax.inject.Inject
 
 @HiltViewModel
 class CalendarViewModel @Inject constructor(
-    private val getMonthEventsUseCase: GetMonthEventsUseCase
+    private val getMonthEventsUseCase: GetMonthEventsUseCase,
+    private val eventDao: EventDao
 ) : ViewModel() {
+
+    companion object {
+        private const val TAG = "CalendarViewModel"
+    }
 
     private val _uiState = MutableStateFlow(CalendarUiState())
     val uiState: StateFlow<CalendarUiState> = _uiState.asStateFlow()
 
     private val monthDataCache = mutableMapOf<YearMonth, List<CalendarDate>>()
+    private val monthLoadingJobs = mutableMapOf<YearMonth, Job>()
 
     init {
         loadCurrentMonthWithAdjacent()
+        checkDatabaseEvents()
+    }
+
+    private fun checkDatabaseEvents() {
+        viewModelScope.launch {
+            val totalEvents = eventDao.getTotalEventCount()
+            Log.d(TAG, "Total events in database at startup: $totalEvents")
+
+            if (totalEvents > 0) {
+                val allEvents = eventDao.getAllEvents()
+                allEvents.take(5).forEach { event ->
+                    val startDate = org.threeten.bp.Instant.ofEpochMilli(event.startTime)
+                        .atZone(org.threeten.bp.ZoneId.systemDefault())
+                        .toLocalDateTime()
+                    Log.d(TAG, "DB Event: ${event.title}, Start: $startDate, Source: ${event.sourceId}")
+                }
+            }
+        }
     }
 
     fun onDateSelected(date: LocalDate) {
@@ -79,18 +106,19 @@ class CalendarViewModel @Inject constructor(
             yearMonth.plusMonths(1)
         )
 
-        monthsToLoad.forEach { month ->
-            if (!monthDataCache.containsKey(month)) {
-                loadMonthData(month)
-            }
-        }
+        // Clear cache for current month to force reload
+        monthDataCache.remove(yearMonth)
 
-        // Update UI state with cached data
-        updateUiStateFromCache()
+        monthsToLoad.forEach { month ->
+            loadMonthData(month)
+        }
     }
 
     private fun loadMonthData(yearMonth: YearMonth) {
-        viewModelScope.launch {
+        // Cancel existing job for this month if it exists
+        monthLoadingJobs[yearMonth]?.cancel()
+
+        monthLoadingJobs[yearMonth] = viewModelScope.launch {
             // Only show loading for the current month
             if (yearMonth == _uiState.value.currentMonth) {
                 _uiState.update { it.copy(isLoading = true) }
@@ -98,9 +126,20 @@ class CalendarViewModel @Inject constructor(
 
             try {
                 // Add timeout to prevent infinite waiting
-                withTimeoutOrNull(5000L) {
-                    getMonthEventsUseCase(yearMonth.year, yearMonth.monthValue)
-                        .collect { events ->
+                // Also check database directly
+                viewModelScope.launch {
+                    val dbEventsCount = eventDao.getTotalEventCount()
+                    Log.d(TAG, "Database has $dbEventsCount total events")
+                }
+
+                // Use take(1) to get only the first emission
+                getMonthEventsUseCase(yearMonth.year, yearMonth.monthValue)
+                    .take(1)
+                    .collect { events ->
+                            Log.d(TAG, "UseCase returned ${events.size} events for ${yearMonth.year}-${yearMonth.monthValue}")
+                            events.take(3).forEach { event ->
+                                Log.d(TAG, "UseCase Event: ${event.title}, Date: ${event.startTime}")
+                            }
                             val calendarDates = generateCalendarDates(yearMonth, events)
 
                             // Cache the data
@@ -124,25 +163,8 @@ class CalendarViewModel @Inject constructor(
                                         monthDataMap = monthDataCache.toMap()
                                     )
                                 }
-                            }
-                        }
-                } ?: run {
-                    // Timeout occurred, load empty calendar
-                    val calendarDates = generateCalendarDates(yearMonth, emptyList())
-                    monthDataCache[yearMonth] = calendarDates
-
-                    if (yearMonth == _uiState.value.currentMonth) {
-                        _uiState.update {
-                            it.copy(
-                                calendarDates = calendarDates,
-                                events = emptyList(),
-                                monthDataMap = monthDataCache.toMap(),
-                                isLoading = false,
-                                error = null
-                            )
                         }
                     }
-                }
             } catch (e: Exception) {
                 // On error, show empty calendar
                 val calendarDates = generateCalendarDates(yearMonth, emptyList())
@@ -217,7 +239,11 @@ class CalendarViewModel @Inject constructor(
         isCurrentMonth: Boolean
     ): CalendarDate {
         val dateEvents = events.filter { event ->
-            event.isOnDate(date.atStartOfDay())
+            val matches = event.isOnDate(date.atStartOfDay())
+            if (matches) {
+                Log.d(TAG, "Event ${event.title} matches date $date")
+            }
+            matches
         }
 
         return CalendarDate(

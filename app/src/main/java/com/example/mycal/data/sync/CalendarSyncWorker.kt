@@ -1,6 +1,7 @@
 package com.example.mycal.data.sync
 
 import android.content.Context
+import android.util.Log
 import androidx.hilt.work.HiltWorker
 import androidx.work.*
 import com.example.mycal.data.local.dao.CalendarSourceDao
@@ -25,6 +26,7 @@ class CalendarSyncWorker @AssistedInject constructor(
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
         try {
             val sourceId = inputData.getString(KEY_SOURCE_ID)
+            Log.d(TAG, "Starting sync work for sourceId: $sourceId")
 
             if (sourceId != null) {
                 syncSingleSource(sourceId)
@@ -32,8 +34,10 @@ class CalendarSyncWorker @AssistedInject constructor(
                 syncAllSources()
             }
 
+            Log.d(TAG, "Sync work completed successfully")
             Result.success()
         } catch (e: Exception) {
+            Log.e(TAG, "Sync work failed", e)
             if (runAttemptCount < MAX_RETRY_ATTEMPTS) {
                 Result.retry()
             } else {
@@ -43,10 +47,19 @@ class CalendarSyncWorker @AssistedInject constructor(
     }
 
     private suspend fun syncSingleSource(sourceId: String) {
-        val source = calendarSourceDao.getSourceById(sourceId) ?: return
+        Log.d(TAG, "Syncing single source: $sourceId")
+        val source = calendarSourceDao.getSourceById(sourceId)
+        if (source == null) {
+            Log.w(TAG, "Source not found: $sourceId")
+            return
+        }
 
-        if (!source.syncEnabled) return
+        if (!source.syncEnabled) {
+            Log.d(TAG, "Sync disabled for source: $sourceId")
+            return
+        }
 
+        Log.d(TAG, "Fetching ICS from URL: ${source.url}")
         val result = icsRemoteDataSource.fetchAndParseIcs(
             url = source.url,
             sourceId = source.id,
@@ -56,14 +69,18 @@ class CalendarSyncWorker @AssistedInject constructor(
 
         when (result) {
             is IcsResult.Success -> {
+                Log.d(TAG, "ICS fetch successful, got ${result.events.size} events")
                 eventDao.deleteEventsBySource(sourceId)
                 eventDao.insertEvents(result.events)
                 calendarSourceDao.updateSyncTime(sourceId, System.currentTimeMillis())
+                Log.d(TAG, "Events saved to database for source: $sourceId")
             }
             is IcsResult.NotModified -> {
+                Log.d(TAG, "ICS not modified for source: $sourceId")
                 calendarSourceDao.updateSyncTime(sourceId, System.currentTimeMillis())
             }
             is IcsResult.Error -> {
+                Log.e(TAG, "Failed to sync source $sourceId: ${result.message}")
                 throw Exception(result.message)
             }
         }
@@ -83,6 +100,7 @@ class CalendarSyncWorker @AssistedInject constructor(
     }
 
     companion object {
+        private const val TAG = "CalendarSyncWorker"
         const val KEY_SOURCE_ID = "source_id"
         const val WORK_NAME_PERIODIC = "calendar_sync_periodic"
         const val WORK_NAME_ONE_TIME = "calendar_sync_one_time"

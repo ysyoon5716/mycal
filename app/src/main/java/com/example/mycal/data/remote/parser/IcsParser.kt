@@ -7,12 +7,18 @@ import net.fortuna.ical4j.model.Component
 import net.fortuna.ical4j.model.Property
 import net.fortuna.ical4j.model.component.VEvent
 import net.fortuna.ical4j.model.property.*
+import net.fortuna.ical4j.model.property.DateProperty
+import android.util.Log
 import org.threeten.bp.*
 import java.io.InputStream
 import java.util.*
 import javax.inject.Inject
 
 class IcsParser @Inject constructor() {
+
+    companion object {
+        private const val TAG = "IcsParser"
+    }
 
     fun parseIcsStream(inputStream: InputStream, sourceId: String, sourceColor: Int): List<EventEntity> {
         val events = mutableListOf<EventEntity>()
@@ -23,9 +29,13 @@ class IcsParser @Inject constructor() {
 
             val vEvents = calendar.getComponents<VEvent>(Component.VEVENT)
 
+            Log.d(TAG, "Parsing ${vEvents.size} events from ICS for source: $sourceId")
             for (vEvent in vEvents) {
                 val event = parseVEvent(vEvent, sourceId, sourceColor)
-                event?.let { events.add(it) }
+                event?.let {
+                    events.add(it)
+                    Log.d(TAG, "Added event: ${it.title} at ${it.startTime}")
+                }
             }
         } catch (e: Exception) {
             throw IcsParseException("Failed to parse ICS file: ${e.message}", e)
@@ -41,10 +51,11 @@ class IcsParser @Inject constructor() {
             val description = vEvent.description?.value
             val location = vEvent.location?.value
 
-            val startDate = parseDateTime(vEvent.startDate)
-            val endDate = parseDateTime(vEvent.endDate)
+            val startDateTime = parseDateTime(vEvent.startDate as? DateProperty)
+            val endDateTime = vEvent.endDate?.let { parseDateTime(it as? DateProperty) } ?: startDateTime?.plusHours(1)
 
-            if (startDate == null || endDate == null) {
+            if (startDateTime == null || endDateTime == null) {
+                Log.w(TAG, "Skipping event with invalid dates: $summary")
                 return null
             }
 
@@ -53,12 +64,18 @@ class IcsParser @Inject constructor() {
 
             val rrule = vEvent.getProperty<RRule>(Property.RRULE)?.value
 
+            // Convert to epoch millis preserving the original time zone
+            val startMillis = startDateTime.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+            val endMillis = endDateTime.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+
+            Log.d(TAG, "Event: $summary, Start: $startDateTime ($startMillis), End: $endDateTime ($endMillis)")
+
             return EventEntity(
                 id = "${sourceId}_${uid}",
                 title = summary,
                 description = description,
-                startTime = startDate.toInstant(ZoneOffset.UTC).toEpochMilli(),
-                endTime = endDate.toInstant(ZoneOffset.UTC).toEpochMilli(),
+                startTime = startMillis,
+                endTime = endMillis,
                 isAllDay = isAllDay,
                 location = location,
                 color = sourceColor,
@@ -70,44 +87,32 @@ class IcsParser @Inject constructor() {
         }
     }
 
-    private fun parseDateTime(dateProperty: DtStart?): LocalDateTime? {
+    private fun parseDateTime(dateProperty: DateProperty?): LocalDateTime? {
         if (dateProperty == null) return null
 
         return try {
             val date = dateProperty.date
             val instant = Instant.ofEpochMilli(date.time)
 
-            val timeZone = dateProperty.timeZone?.let {
-                try {
-                    ZoneId.of(it.id)
-                } catch (e: Exception) {
-                    ZoneId.systemDefault()
+            // Get the time zone from the property, or use system default
+            val timeZone = when {
+                dateProperty.timeZone != null -> {
+                    try {
+                        ZoneId.of(dateProperty.timeZone.id)
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Invalid timezone: ${dateProperty.timeZone.id}, using system default")
+                        ZoneId.systemDefault()
+                    }
                 }
-            } ?: ZoneId.systemDefault()
+                dateProperty.isUtc -> ZoneOffset.UTC
+                else -> ZoneId.systemDefault()
+            }
 
-            LocalDateTime.ofInstant(instant, timeZone)
+            val result = LocalDateTime.ofInstant(instant, timeZone)
+            Log.d(TAG, "Parsed date: ${date.time} -> $result (TZ: $timeZone)")
+            result
         } catch (e: Exception) {
-            null
-        }
-    }
-
-    private fun parseDateTime(dateProperty: DtEnd?): LocalDateTime? {
-        if (dateProperty == null) return null
-
-        return try {
-            val date = dateProperty.date
-            val instant = Instant.ofEpochMilli(date.time)
-
-            val timeZone = dateProperty.timeZone?.let {
-                try {
-                    ZoneId.of(it.id)
-                } catch (e: Exception) {
-                    ZoneId.systemDefault()
-                }
-            } ?: ZoneId.systemDefault()
-
-            LocalDateTime.ofInstant(instant, timeZone)
-        } catch (e: Exception) {
+            Log.e(TAG, "Error parsing date", e)
             null
         }
     }

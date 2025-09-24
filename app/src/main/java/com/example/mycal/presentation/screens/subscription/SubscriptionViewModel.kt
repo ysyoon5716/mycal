@@ -10,6 +10,7 @@ import com.example.mycal.domain.repository.CalendarSourceRepository
 import com.example.mycal.domain.usecase.AddCalendarSourceUseCase
 import com.example.mycal.domain.usecase.ValidateIcsUrlUseCase
 import com.example.mycal.domain.usecase.ValidationResult
+import com.example.mycal.data.local.dao.EventDao
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -19,7 +20,8 @@ import javax.inject.Inject
 class SubscriptionViewModel @Inject constructor(
     private val calendarSourceRepository: CalendarSourceRepository,
     private val addCalendarSourceUseCase: AddCalendarSourceUseCase,
-    private val validateIcsUrlUseCase: ValidateIcsUrlUseCase
+    private val validateIcsUrlUseCase: ValidateIcsUrlUseCase,
+    private val eventDao: EventDao
 ) : ViewModel() {
 
     companion object {
@@ -137,7 +139,29 @@ class SubscriptionViewModel @Inject constructor(
     fun syncSource(sourceId: String) {
         viewModelScope.launch {
             _uiState.update { it.copy(syncingSourceIds = it.syncingSourceIds + sourceId) }
+
+            // Debug: Check event count before sync
+            val beforeCount = eventDao.getEventCountBySource(sourceId)
+            Log.d(TAG, "Events before sync for $sourceId: $beforeCount")
+
             calendarSourceRepository.syncSource(sourceId)
+
+            // Give sync some time to complete
+            kotlinx.coroutines.delay(2000)
+
+            // Debug: Check event count after sync
+            val afterCount = eventDao.getEventCountBySource(sourceId)
+            Log.d(TAG, "Events after sync for $sourceId: $afterCount")
+
+            // Debug: Get all events to check dates
+            val allEvents = eventDao.getAllEvents()
+            Log.d(TAG, "Total events in database: ${allEvents.size}")
+            allEvents.filter { it.sourceId == sourceId }.take(5).forEach { event ->
+                val startDate = java.time.Instant.ofEpochMilli(event.startTime)
+                val endDate = java.time.Instant.ofEpochMilli(event.endTime)
+                Log.d(TAG, "Event: ${event.title}, Start: $startDate, End: $endDate")
+            }
+
             _uiState.update { it.copy(syncingSourceIds = it.syncingSourceIds - sourceId) }
         }
     }

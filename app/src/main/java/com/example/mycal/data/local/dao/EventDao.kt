@@ -6,6 +6,14 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface EventDao {
+    @Query("SELECT COUNT(*) FROM events")
+    suspend fun getTotalEventCount(): Int
+
+    @Query("SELECT COUNT(*) FROM events WHERE sourceId = :sourceId")
+    suspend fun getEventCountBySource(sourceId: String): Int
+
+    @Query("SELECT * FROM events")
+    suspend fun getAllEvents(): List<EventEntity>
     @Query("SELECT * FROM events WHERE startTime <= :endTime AND endTime >= :startTime ORDER BY startTime ASC")
     fun getEventsInRange(startTime: Long, endTime: Long): Flow<List<EventEntity>>
 

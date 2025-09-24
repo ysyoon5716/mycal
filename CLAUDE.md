@@ -61,3 +61,8 @@ export JAVA_HOME=/Applications/Android\ Studio.app/Contents/jbr/Contents/Home &&
 - APK 출력 경로: `app/build/outputs/apk/debug/app-debug.apk`
 - AndroidManifest.xml: `app/src/main/AndroidManifest.xml`
 - 앱 빌드 설정: `app/build.gradle.kts`
+
+### 테스트 데이터
+ICS
+- URL: https://ext.todoist.com/export/ical/project?user_id=54262437&project_id=6cvRx3HXWXRpfFwv&ical_token=f4c956ac&r_factor=3342
+- Name: calendar
