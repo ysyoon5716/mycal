@@ -94,22 +94,34 @@ class IcsParser @Inject constructor() {
             val date = dateProperty.date
             val instant = Instant.ofEpochMilli(date.time)
 
-            // Get the time zone from the property, or use system default
-            val timeZone = when {
+            // ICS 파일의 시간대 정보 확인
+            val sourceTimeZone = when {
                 dateProperty.timeZone != null -> {
                     try {
                         ZoneId.of(dateProperty.timeZone.id)
                     } catch (e: Exception) {
-                        Log.w(TAG, "Invalid timezone: ${dateProperty.timeZone.id}, using system default")
-                        ZoneId.systemDefault()
+                        Log.w(TAG, "Invalid timezone: ${dateProperty.timeZone.id}, using UTC")
+                        ZoneOffset.UTC
                     }
                 }
                 dateProperty.isUtc -> ZoneOffset.UTC
-                else -> ZoneId.systemDefault()
+                else -> ZoneOffset.UTC  // 기본값을 UTC로 설정
             }
 
-            val result = LocalDateTime.ofInstant(instant, timeZone)
-            Log.d(TAG, "Parsed date: ${date.time} -> $result (TZ: $timeZone)")
+            // UTC 시간을 한국 시간대로 변환
+            val utcDateTime = LocalDateTime.ofInstant(instant, sourceTimeZone)
+            val koreaTimeZone = ZoneId.of("Asia/Seoul")
+            val result = if (sourceTimeZone == ZoneOffset.UTC) {
+                // UTC에서 한국 시간으로 변환
+                utcDateTime.atZone(ZoneOffset.UTC)
+                    .withZoneSameInstant(koreaTimeZone)
+                    .toLocalDateTime()
+            } else {
+                // 이미 특정 시간대가 지정된 경우
+                utcDateTime
+            }
+
+            Log.d(TAG, "Parsed date: ${date.time} -> UTC: $utcDateTime -> KST: $result (Source TZ: $sourceTimeZone)")
             result
         } catch (e: Exception) {
             Log.e(TAG, "Error parsing date", e)

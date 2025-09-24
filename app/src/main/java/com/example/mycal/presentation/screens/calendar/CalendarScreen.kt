@@ -22,6 +22,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.mycal.domain.model.CalendarViewMode
 import com.example.mycal.presentation.components.CalendarGrid
+import com.example.mycal.presentation.components.DailyEventsList
 import kotlinx.coroutines.launch
 import org.threeten.bp.YearMonth
 import org.threeten.bp.format.DateTimeFormatter
@@ -63,13 +64,34 @@ fun CalendarScreen(
             // Calendar content based on view mode
             when (uiState.viewMode) {
                 CalendarViewMode.MONTH -> {
-                    MonthViewWithSwipe(
-                        currentMonth = uiState.currentMonth,
-                        monthDataMap = uiState.monthDataMap,
-                        onDateSelected = viewModel::onDateSelected,
-                        onMonthChanged = viewModel::onMonthChanged,
+                    // Split screen: Calendar (60%) + Events List (40%)
+                    Column(
                         modifier = Modifier.fillMaxSize()
-                    )
+                    ) {
+                        // Month Calendar - 60% of screen
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .weight(0.6f)
+                        ) {
+                            MonthViewWithSwipe(
+                                currentMonth = uiState.currentMonth,
+                                monthDataMap = uiState.monthDataMap,
+                                onDateSelected = viewModel::onDateSelected,
+                                onMonthChanged = viewModel::onMonthChanged,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
+
+                        // Daily Events List - 40% of screen
+                        DailyEventsList(
+                            selectedDate = uiState.selectedDate,
+                            events = viewModel.getSelectedDateEvents(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .weight(0.4f)
+                        )
+                    }
                 }
                 CalendarViewMode.WEEK -> {
                     // Week view implementation (placeholder)

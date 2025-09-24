@@ -56,7 +56,24 @@ class CalendarViewModel @Inject constructor(
     }
 
     fun onDateSelected(date: LocalDate) {
+        Log.d(TAG, "Date selected: $date")
         _uiState.update { it.copy(selectedDate = date) }
+    }
+
+    fun getSelectedDateEvents(): List<CalendarEvent> {
+        val selectedDate = _uiState.value.selectedDate
+        val allEvents = _uiState.value.events
+
+        val selectedEvents = allEvents.filter { event ->
+            event.isOnDate(selectedDate.atStartOfDay())
+        }.sortedBy { it.startTime }
+
+        Log.d(TAG, "Selected date: $selectedDate, Events: ${selectedEvents.size}")
+        selectedEvents.forEach { event ->
+            Log.d(TAG, "Event on selected date: ${event.title}, Time: ${event.startTime}")
+        }
+
+        return selectedEvents
     }
 
     fun onViewModeChanged(mode: CalendarViewMode) {
