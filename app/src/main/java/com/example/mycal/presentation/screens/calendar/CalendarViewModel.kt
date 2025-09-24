@@ -8,19 +8,24 @@ import com.example.mycal.domain.model.CalendarEvent
 import com.example.mycal.domain.model.CalendarViewMode
 import com.example.mycal.domain.usecase.GetMonthEventsUseCase
 import com.example.mycal.data.local.dao.EventDao
+import com.example.mycal.domain.event.SyncEventManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.FlowPreview
 import org.threeten.bp.LocalDate
 import org.threeten.bp.YearMonth
 import javax.inject.Inject
 
+@OptIn(FlowPreview::class)
 @HiltViewModel
 class CalendarViewModel @Inject constructor(
     private val getMonthEventsUseCase: GetMonthEventsUseCase,
-    private val eventDao: EventDao
+    private val eventDao: EventDao,
+    private val syncEventManager: SyncEventManager
 ) : ViewModel() {
 
     companion object {
@@ -30,12 +35,81 @@ class CalendarViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(CalendarUiState())
     val uiState: StateFlow<CalendarUiState> = _uiState.asStateFlow()
 
+    private val _selectedDateEvents = MutableStateFlow<List<CalendarEvent>>(emptyList())
+    val selectedDateEvents: StateFlow<List<CalendarEvent>> = _selectedDateEvents.asStateFlow()
+
     private val monthDataCache = mutableMapOf<YearMonth, List<CalendarDate>>()
     private val monthLoadingJobs = mutableMapOf<YearMonth, Job>()
+    private var currentMonthSubscription: Job? = null
 
     init {
         loadCurrentMonthWithAdjacent()
         checkDatabaseEvents()
+        observeSyncEvents()
+        // Initialize selected date events
+        updateSelectedDateEvents()
+        // Start observing after initial load
+        viewModelScope.launch {
+            delay(1500)
+            startObservingCurrentMonth()
+        }
+    }
+
+    private fun observeCurrentMonthEvents() {
+        // This function sets up real-time observation ONLY when not manually refreshing
+    }
+
+    private fun startObservingCurrentMonth() {
+        // Cancel any existing subscription first
+        currentMonthSubscription?.cancel()
+
+        val currentMonth = _uiState.value.currentMonth
+
+        // Subscribe to current month events with debounce
+        currentMonthSubscription = viewModelScope.launch {
+            // Wait a bit after initial load to avoid conflicts
+            delay(1000)
+
+            getMonthEventsUseCase(currentMonth.year, currentMonth.monthValue)
+                .debounce(500) // Longer debounce for stability
+                .distinctUntilChanged { old, new ->
+                    // Compare by size and IDs
+                    old.size == new.size &&
+                    old.map { it.id }.toSet() == new.map { it.id }.toSet()
+                }
+                .collect { events ->
+                    Log.d(TAG, "Real-time update: ${events.size} events for $currentMonth")
+                    val calendarDates = generateCalendarDates(currentMonth, events)
+
+                    // Update cache
+                    monthDataCache[currentMonth] = calendarDates
+
+                    // Update UI state
+                    _uiState.update {
+                        if (it.currentMonth == currentMonth) { // Only update if still on same month
+                            it.copy(
+                                calendarDates = calendarDates,
+                                events = events,
+                                monthDataMap = monthDataCache.toMap()
+                            )
+                        } else {
+                            it
+                        }
+                    }
+
+                    // Update selected date events
+                    updateSelectedDateEvents()
+                }
+        }
+    }
+
+    private fun observeSyncEvents() {
+        viewModelScope.launch {
+            syncEventManager.syncCompletedEvent.collect {
+                Log.d(TAG, "Sync completed event received, refreshing calendar")
+                refreshCurrentMonth()
+            }
+        }
     }
 
     private fun checkDatabaseEvents() {
@@ -78,6 +152,26 @@ class CalendarViewModel @Inject constructor(
                 monthDataMap = updatedMonthDataMap
             )
         }
+
+        // Update selected date events
+        updateSelectedDateEvents()
+    }
+
+    private fun updateSelectedDateEvents() {
+        val selectedDate = _uiState.value.selectedDate
+        val allEvents = _uiState.value.events
+
+        val events = allEvents.filter { event ->
+            event.isOnDate(selectedDate.atStartOfDay())
+        }.sortedWith(compareBy({ it.startTime }, { it.id })) // Secondary sort by ID for stability
+
+        // Only update if the events have actually changed
+        val currentEvents = _selectedDateEvents.value
+        if (currentEvents.size != events.size ||
+            currentEvents.map { it.id } != events.map { it.id }) {
+            Log.d(TAG, "Updating selected date events: ${events.size} events for $selectedDate")
+            _selectedDateEvents.value = events
+        }
     }
 
     fun getSelectedDateEvents(): List<CalendarEvent> {
@@ -101,8 +195,17 @@ class CalendarViewModel @Inject constructor(
     }
 
     fun onMonthChanged(yearMonth: YearMonth) {
+        // Cancel current subscription before changing month
+        currentMonthSubscription?.cancel()
+
         _uiState.update { it.copy(currentMonth = yearMonth) }
         loadMonthDataWithAdjacent(yearMonth)
+
+        // Start observing the new month after loading
+        viewModelScope.launch {
+            delay(1500) // Wait for initial load
+            startObservingCurrentMonth()
+        }
     }
 
     fun navigateToPreviousMonth() {
@@ -124,6 +227,33 @@ class CalendarViewModel @Inject constructor(
             )
         }
         loadCurrentMonthWithAdjacent()
+    }
+
+    fun refreshCurrentMonth() {
+        Log.d(TAG, "Refreshing current month data")
+
+        // Cancel real-time subscription during refresh
+        currentMonthSubscription?.cancel()
+
+        // Clear cache for current month and adjacent months to force reload
+        val currentMonth = _uiState.value.currentMonth
+        monthDataCache.remove(currentMonth.minusMonths(1))
+        monthDataCache.remove(currentMonth)
+        monthDataCache.remove(currentMonth.plusMonths(1))
+
+        // Cancel existing loading jobs
+        monthLoadingJobs[currentMonth.minusMonths(1)]?.cancel()
+        monthLoadingJobs[currentMonth]?.cancel()
+        monthLoadingJobs[currentMonth.plusMonths(1)]?.cancel()
+
+        // Reload the data
+        loadCurrentMonthWithAdjacent()
+
+        // Restart observation after reload is complete
+        viewModelScope.launch {
+            delay(1500) // Wait for reload to complete
+            startObservingCurrentMonth()
+        }
     }
 
     private fun loadCurrentMonth() {
@@ -169,39 +299,40 @@ class CalendarViewModel @Inject constructor(
                     Log.d(TAG, "Database has $dbEventsCount total events")
                 }
 
-                // Use take(1) to get only the first emission
-                getMonthEventsUseCase(yearMonth.year, yearMonth.monthValue)
-                    .take(1)
-                    .collect { events ->
-                            Log.d(TAG, "UseCase returned ${events.size} events for ${yearMonth.year}-${yearMonth.monthValue}")
-                            events.take(3).forEach { event ->
-                                Log.d(TAG, "UseCase Event: ${event.title}, Date: ${event.startTime}")
-                            }
-                            val calendarDates = generateCalendarDates(yearMonth, events)
+                // Get the first emission from the Flow
+                val events = getMonthEventsUseCase(yearMonth.year, yearMonth.monthValue)
+                    .first()
 
-                            // Cache the data
-                            monthDataCache[yearMonth] = calendarDates
+                Log.d(TAG, "UseCase returned ${events.size} events for ${yearMonth.year}-${yearMonth.monthValue}")
+                events.take(3).forEach { event ->
+                    Log.d(TAG, "UseCase Event: ${event.title}, Date: ${event.startTime}")
+                }
+                val calendarDates = generateCalendarDates(yearMonth, events)
 
-                            // Update UI state
-                            if (yearMonth == _uiState.value.currentMonth) {
-                                _uiState.update {
-                                    it.copy(
-                                        calendarDates = calendarDates,
-                                        events = events,
-                                        monthDataMap = monthDataCache.toMap(),
-                                        isLoading = false,
-                                        error = null
-                                    )
-                                }
-                            } else {
-                                // Just update the cache in UI state
-                                _uiState.update {
-                                    it.copy(
-                                        monthDataMap = monthDataCache.toMap()
-                                    )
-                                }
-                        }
+                // Cache the data
+                monthDataCache[yearMonth] = calendarDates
+
+                // Update UI state
+                if (yearMonth == _uiState.value.currentMonth) {
+                    _uiState.update {
+                        it.copy(
+                            calendarDates = calendarDates,
+                            events = events,
+                            monthDataMap = monthDataCache.toMap(),
+                            isLoading = false,
+                            error = null
+                        )
                     }
+                    // Update selected date events when current month events change
+                    updateSelectedDateEvents()
+                } else {
+                    // Just update the cache in UI state
+                    _uiState.update {
+                        it.copy(
+                            monthDataMap = monthDataCache.toMap()
+                        )
+                    }
+                }
             } catch (e: Exception) {
                 // On error, show empty calendar
                 val calendarDates = generateCalendarDates(yearMonth, emptyList())

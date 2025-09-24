@@ -11,6 +11,7 @@ import com.example.mycal.domain.usecase.AddCalendarSourceUseCase
 import com.example.mycal.domain.usecase.ValidateIcsUrlUseCase
 import com.example.mycal.domain.usecase.ValidationResult
 import com.example.mycal.data.local.dao.EventDao
+import com.example.mycal.domain.event.SyncEventManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -21,7 +22,8 @@ class SubscriptionViewModel @Inject constructor(
     private val calendarSourceRepository: CalendarSourceRepository,
     private val addCalendarSourceUseCase: AddCalendarSourceUseCase,
     private val validateIcsUrlUseCase: ValidateIcsUrlUseCase,
-    private val eventDao: EventDao
+    private val eventDao: EventDao,
+    private val syncEventManager: SyncEventManager
 ) : ViewModel() {
 
     companion object {
@@ -108,6 +110,8 @@ class SubscriptionViewModel @Inject constructor(
             ).fold(
                 onSuccess = {
                     hideAddDialog()
+                    // Notify that sync is complete
+                    syncEventManager.notifySyncCompleted()
                 },
                 onFailure = { error ->
                     _uiState.update { state ->
@@ -163,6 +167,9 @@ class SubscriptionViewModel @Inject constructor(
             }
 
             _uiState.update { it.copy(syncingSourceIds = it.syncingSourceIds - sourceId) }
+
+            // Notify that sync is complete
+            syncEventManager.notifySyncCompleted()
         }
     }
 
@@ -171,6 +178,9 @@ class SubscriptionViewModel @Inject constructor(
             _uiState.update { it.copy(isSyncingAll = true) }
             calendarSourceRepository.syncAllSources()
             _uiState.update { it.copy(isSyncingAll = false) }
+
+            // Notify that sync is complete
+            syncEventManager.notifySyncCompleted()
         }
     }
 }

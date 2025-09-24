@@ -37,6 +37,7 @@ fun CalendarScreen(
     viewModel: CalendarViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val selectedDateEvents by viewModel.selectedDateEvents.collectAsStateWithLifecycle()
 
     Scaffold(
         modifier = modifier,
@@ -86,7 +87,7 @@ fun CalendarScreen(
                         // Daily Events List - 40% of screen
                         DailyEventsList(
                             selectedDate = uiState.selectedDate,
-                            events = viewModel.getSelectedDateEvents(),
+                            events = selectedDateEvents,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .weight(0.4f)

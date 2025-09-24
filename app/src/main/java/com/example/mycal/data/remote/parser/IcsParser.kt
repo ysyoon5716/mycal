@@ -34,7 +34,9 @@ class IcsParser @Inject constructor() {
                 val event = parseVEvent(vEvent, sourceId, sourceColor)
                 event?.let {
                     events.add(it)
-                    Log.d(TAG, "Added event: ${it.title} at ${it.startTime}")
+                    val startDate = LocalDateTime.ofInstant(Instant.ofEpochMilli(it.startTime), ZoneId.systemDefault())
+                    val endDate = LocalDateTime.ofInstant(Instant.ofEpochMilli(it.endTime), ZoneId.systemDefault())
+                    Log.d(TAG, "Added event: ${it.title}, isAllDay: ${it.isAllDay}, Start: $startDate, End: $endDate")
                 }
             }
         } catch (e: Exception) {
@@ -51,16 +53,38 @@ class IcsParser @Inject constructor() {
             val description = vEvent.description?.value
             val location = vEvent.location?.value
 
-            val startDateTime = parseDateTime(vEvent.startDate as? DateProperty)
-            val endDateTime = vEvent.endDate?.let { parseDateTime(it as? DateProperty) } ?: startDateTime?.plusHours(1)
+            // Check if this is an all-day event
+            val isAllDay = vEvent.startDate?.date is net.fortuna.ical4j.model.Date &&
+                    !(vEvent.startDate?.date is net.fortuna.ical4j.model.DateTime)
+
+            Log.d(TAG, "Processing event: $summary, isAllDay: $isAllDay")
+
+            // Parse dates with all-day event handling
+            val startDateTime = if (isAllDay) {
+                parseAllDayDate(vEvent.startDate as? DateProperty)
+            } else {
+                parseDateTime(vEvent.startDate as? DateProperty)
+            }
+
+            val endDateTime = if (isAllDay) {
+                // For all-day events, handle end date properly
+                if (vEvent.endDate != null) {
+                    val parsedEndDate = parseAllDayDate(vEvent.endDate as? DateProperty)
+                    // ICS standard: end date is exclusive for all-day events
+                    // So we need to subtract one day and set to end of day
+                    parsedEndDate?.minusDays(1)?.withHour(23)?.withMinute(59)?.withSecond(59)
+                } else {
+                    // If no end date, it's a single day event - set to end of same day
+                    startDateTime?.withHour(23)?.withMinute(59)?.withSecond(59)
+                }
+            } else {
+                vEvent.endDate?.let { parseDateTime(it as? DateProperty) } ?: startDateTime?.plusHours(1)
+            }
 
             if (startDateTime == null || endDateTime == null) {
                 Log.w(TAG, "Skipping event with invalid dates: $summary")
                 return null
             }
-
-            val isAllDay = vEvent.startDate?.date is net.fortuna.ical4j.model.Date &&
-                    !(vEvent.startDate?.date is net.fortuna.ical4j.model.DateTime)
 
             val rrule = vEvent.getProperty<RRule>(Property.RRULE)?.value
 
@@ -68,7 +92,7 @@ class IcsParser @Inject constructor() {
             val startMillis = startDateTime.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
             val endMillis = endDateTime.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
 
-            Log.d(TAG, "Event: $summary, Start: $startDateTime ($startMillis), End: $endDateTime ($endMillis)")
+            Log.d(TAG, "Event: $summary, isAllDay: $isAllDay, Start: $startDateTime ($startMillis), End: $endDateTime ($endMillis)")
 
             return EventEntity(
                 id = "${sourceId}_${uid}",
@@ -83,7 +107,30 @@ class IcsParser @Inject constructor() {
                 recurrenceRule = rrule
             )
         } catch (e: Exception) {
+            Log.e(TAG, "Error parsing event", e)
             return null
+        }
+    }
+
+    private fun parseAllDayDate(dateProperty: DateProperty?): LocalDateTime? {
+        if (dateProperty == null) return null
+
+        return try {
+            val date = dateProperty.date
+
+            // For all-day events, parse as local date without timezone conversion
+            // All-day events should be treated as occurring on the same calendar day regardless of timezone
+            val instant = Instant.ofEpochMilli(date.time)
+            val localDate = instant.atZone(ZoneId.systemDefault()).toLocalDate()
+
+            // Set to start of day (00:00:00)
+            val result = localDate.atStartOfDay()
+
+            Log.d(TAG, "Parsed all-day date: ${date.time} -> $result")
+            result
+        } catch (e: Exception) {
+            Log.e(TAG, "Error parsing all-day date", e)
+            null
         }
     }
 
@@ -121,10 +168,10 @@ class IcsParser @Inject constructor() {
                 utcDateTime
             }
 
-            Log.d(TAG, "Parsed date: ${date.time} -> UTC: $utcDateTime -> KST: $result (Source TZ: $sourceTimeZone)")
+            Log.d(TAG, "Parsed date/time: ${date.time} -> UTC: $utcDateTime -> KST: $result (Source TZ: $sourceTimeZone)")
             result
         } catch (e: Exception) {
-            Log.e(TAG, "Error parsing date", e)
+            Log.e(TAG, "Error parsing date/time", e)
             null
         }
     }
