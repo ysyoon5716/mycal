@@ -5,6 +5,7 @@ plugins {
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
     kotlin("kapt")
+    kotlin("plugin.serialization") version "1.9.0"
 }
 
 android {
@@ -107,6 +108,17 @@ dependencies {
     implementation("androidx.work:work-runtime-ktx:2.9.0")
     implementation("androidx.hilt:hilt-work:1.1.0")
     kapt("androidx.hilt:hilt-compiler:1.1.0")
+
+    // Glance Widget
+    implementation("androidx.glance:glance:1.1.1")
+    implementation("androidx.glance:glance-appwidget:1.1.1")
+    implementation("androidx.glance:glance-material3:1.1.1")
+
+    // DataStore for widget state
+    implementation("androidx.datastore:datastore-preferences:1.0.0")
+
+    // Serialization
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.0")
 
     // Debug
     debugImplementation("androidx.compose.ui:ui-tooling")
