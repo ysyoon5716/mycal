@@ -57,7 +57,27 @@ class CalendarViewModel @Inject constructor(
 
     fun onDateSelected(date: LocalDate) {
         Log.d(TAG, "Date selected: $date")
-        _uiState.update { it.copy(selectedDate = date) }
+
+        // Update selected date
+        _uiState.update { currentState ->
+            // Update monthDataCache with new selected state
+            val updatedMonthDataMap = monthDataCache.mapValues { (yearMonth, dates) ->
+                dates.map { calendarDate ->
+                    calendarDate.copy(isSelected = calendarDate.date == date)
+                }
+            }
+
+            // Update the cache
+            monthDataCache.clear()
+            monthDataCache.putAll(updatedMonthDataMap)
+
+            // Return updated state
+            currentState.copy(
+                selectedDate = date,
+                calendarDates = updatedMonthDataMap[currentState.currentMonth] ?: currentState.calendarDates,
+                monthDataMap = updatedMonthDataMap
+            )
+        }
     }
 
     fun getSelectedDateEvents(): List<CalendarEvent> {
