@@ -1,5 +1,6 @@
 package com.example.mycal.presentation.screens.subscription
 
+import android.util.Log
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.lifecycle.ViewModel
@@ -20,6 +21,17 @@ class SubscriptionViewModel @Inject constructor(
     private val addCalendarSourceUseCase: AddCalendarSourceUseCase,
     private val validateIcsUrlUseCase: ValidateIcsUrlUseCase
 ) : ViewModel() {
+
+    companion object {
+        private const val TAG = "SubscriptionViewModel"
+    }
+
+    init {
+        Log.d(TAG, "SubscriptionViewModel initialized")
+        Log.d(TAG, "Repository: $calendarSourceRepository")
+        Log.d(TAG, "AddUseCase: $addCalendarSourceUseCase")
+        Log.d(TAG, "ValidateUseCase: $validateIcsUrlUseCase")
+    }
 
     private val _uiState = MutableStateFlow(SubscriptionUiState())
     val uiState: StateFlow<SubscriptionUiState> = _uiState.asStateFlow()

@@ -1,5 +1,6 @@
 package com.example.mycal.presentation.screens.subscription
 
+import android.util.Log
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -9,6 +10,7 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -24,6 +26,9 @@ fun SubscriptionListScreen(
     onNavigateBack: () -> Unit,
     viewModel: SubscriptionViewModel = hiltViewModel()
 ) {
+    LaunchedEffect(Unit) {
+        Log.d("SubscriptionListScreen", "Screen launched with viewModel: $viewModel")
+    }
     val uiState by viewModel.uiState.collectAsState()
     val sources by viewModel.sources.collectAsState()
 
