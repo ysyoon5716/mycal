@@ -11,7 +11,7 @@ import com.example.mycal.data.local.entity.EventEntity
 
 @Database(
     entities = [EventEntity::class, CalendarSourceEntity::class],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 abstract class CalendarDatabase : RoomDatabase() {

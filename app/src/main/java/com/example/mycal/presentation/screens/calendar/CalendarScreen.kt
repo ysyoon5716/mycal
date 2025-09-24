@@ -24,6 +24,7 @@ import com.example.mycal.domain.model.CalendarViewMode
 import com.example.mycal.presentation.components.CalendarGrid
 import com.example.mycal.presentation.components.DailyEventsList
 import kotlinx.coroutines.launch
+import org.threeten.bp.LocalDate
 import org.threeten.bp.YearMonth
 import org.threeten.bp.format.DateTimeFormatter
 import org.threeten.bp.format.TextStyle
@@ -33,11 +34,21 @@ import java.util.Locale
 @Composable
 fun CalendarScreen(
     modifier: Modifier = Modifier,
+    initialSelectedDate: LocalDate? = null,
     onNavigateToSubscriptions: () -> Unit = {},
+    onDateHandled: () -> Unit = {},
     viewModel: CalendarViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val selectedDateEvents by viewModel.selectedDateEvents.collectAsStateWithLifecycle()
+
+    // Handle initial selected date from widget
+    LaunchedEffect(initialSelectedDate) {
+        initialSelectedDate?.let {
+            viewModel.onDateSelected(it)
+            onDateHandled()
+        }
+    }
 
     Scaffold(
         modifier = modifier,

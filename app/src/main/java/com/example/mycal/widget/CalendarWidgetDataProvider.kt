@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import org.threeten.bp.LocalDate
 import org.threeten.bp.LocalTime
+import org.threeten.bp.YearMonth
 import org.threeten.bp.ZoneId
 
 class CalendarWidgetDataProvider(private val context: Context) {
@@ -57,10 +58,14 @@ class CalendarWidgetDataProvider(private val context: Context) {
             // Get week events for large widget
             val weekEvents = getWeekEvents(today)
 
+            // Get month events for extra large widget
+            val monthEvents = getMonthEvents(YearMonth.from(today))
+
             CalendarWidgetState(
                 selectedDateMillis = System.currentTimeMillis(),
                 todayEvents = todayEvents,
                 weekEvents = weekEvents,
+                monthEvents = monthEvents,
                 lastUpdateTimeMillis = System.currentTimeMillis()
             )
         } catch (e: Exception) {
@@ -103,6 +108,60 @@ class CalendarWidgetDataProvider(private val context: Context) {
         }
 
         return weekEvents
+    }
+
+    private suspend fun getMonthEvents(yearMonth: YearMonth): Map<String, List<WidgetEvent>> {
+        val monthEvents = mutableMapOf<String, List<WidgetEvent>>()
+
+        try {
+            Log.d(TAG, "Fetching month events for $yearMonth")
+
+            // Get events for the entire month including previous and next month days that appear in the widget
+            val firstDayOfMonth = yearMonth.atDay(1)
+            val lastDayOfMonth = yearMonth.atEndOfMonth()
+            val firstDayOfWeek = firstDayOfMonth.dayOfWeek.value % 7  // 0 = Sunday
+
+            // Start from the first visible day (could be from previous month)
+            val startDate = firstDayOfMonth.minusDays(firstDayOfWeek.toLong())
+            // End at the last visible day (could be from next month)
+            // We show up to 42 days (6 weeks) in the calendar grid
+            val endDate = startDate.plusDays(41)
+
+            Log.d(TAG, "Fetching events from $startDate to $endDate")
+
+            var currentDate = startDate
+            while (!currentDate.isAfter(endDate)) {
+                val dayStart = currentDate.atStartOfDay(ZoneId.systemDefault())
+                val dayEnd = currentDate.atTime(LocalTime.MAX).atZone(ZoneId.systemDefault())
+
+                val events = database.eventDao()
+                    .getEventsInRange(
+                        dayStart.toInstant().toEpochMilli(),
+                        dayEnd.toInstant().toEpochMilli()
+                    )
+                    .first()
+                    .map { entity ->
+                        WidgetEvent(
+                            id = entity.id,
+                            title = entity.title,
+                            startTimeMillis = entity.startTime,
+                            endTimeMillis = entity.endTime,
+                            isAllDay = entity.isAllDay,
+                            color = entity.color,
+                            location = entity.location
+                        )
+                    }
+
+                monthEvents[currentDate.toString()] = events
+                currentDate = currentDate.plusDays(1)
+            }
+
+            Log.d(TAG, "Fetched events for ${monthEvents.size} days")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error fetching month events", e)
+        }
+
+        return monthEvents
     }
 
     suspend fun refreshWidget() {

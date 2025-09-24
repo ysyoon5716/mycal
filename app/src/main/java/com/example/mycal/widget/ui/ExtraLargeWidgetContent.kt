@@ -16,15 +16,13 @@ import androidx.glance.text.TextStyle
 import com.example.mycal.MainActivity
 import com.example.mycal.widget.state.CalendarWidgetState
 import com.example.mycal.widget.state.WidgetEvent
-import org.threeten.bp.Instant
 import org.threeten.bp.LocalDate
-import org.threeten.bp.LocalDateTime
 import org.threeten.bp.YearMonth
 import org.threeten.bp.ZoneId
 import org.threeten.bp.format.DateTimeFormatter
 
 @Composable
-fun MediumWidgetContent(state: CalendarWidgetState) {
+fun ExtraLargeWidgetContent(state: CalendarWidgetState) {
     val today = LocalDate.now()
     val currentMonth = YearMonth.now()
     val monthFormatter = DateTimeFormatter.ofPattern("MMMM yyyy")
@@ -39,7 +37,7 @@ fun MediumWidgetContent(state: CalendarWidgetState) {
         Row(
             modifier = GlanceModifier
                 .fillMaxWidth()
-                .padding(bottom = 6.dp),
+                .padding(bottom = 4.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -47,14 +45,14 @@ fun MediumWidgetContent(state: CalendarWidgetState) {
                 text = currentMonth.format(monthFormatter),
                 style = TextStyle(
                     color = GlanceTheme.colors.primary,
-                    fontSize = 14.sp,
+                    fontSize = 18.sp,
                     fontWeight = FontWeight.Bold
                 )
             )
         }
 
-        // Calendar grid with events
-        FullMonthCalendarGridMedium(
+        // Calendar grid
+        FullMonthCalendarGrid(
             currentMonth = currentMonth,
             today = today,
             state = state
@@ -63,7 +61,7 @@ fun MediumWidgetContent(state: CalendarWidgetState) {
 }
 
 @Composable
-private fun FullMonthCalendarGridMedium(
+private fun FullMonthCalendarGrid(
     currentMonth: YearMonth,
     today: LocalDate,
     state: CalendarWidgetState
@@ -87,7 +85,7 @@ private fun FullMonthCalendarGridMedium(
         ) {
             daysOfWeek.forEachIndexed { index, day ->
                 Box(
-                    modifier = GlanceModifier.fillMaxWidth(),
+                    modifier = GlanceModifier.defaultWeight(),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
@@ -98,7 +96,7 @@ private fun FullMonthCalendarGridMedium(
                                 6 -> GlanceTheme.colors.primary // Saturday in blue
                                 else -> GlanceTheme.colors.onSurfaceVariant
                             },
-                            fontSize = 9.sp,
+                            fontSize = 14.sp,
                             fontWeight = FontWeight.Medium
                         )
                     )
@@ -121,7 +119,7 @@ private fun FullMonthCalendarGridMedium(
                         // Previous month days
                         week == 0 && dayOfWeek < firstDayOfWeek -> {
                             val date = previousMonth.atDay(previousMonthDayCounter)
-                            DayCellMedium(
+                            DayCell(
                                 date = date,
                                 dayNumber = previousMonthDayCounter,
                                 isCurrentMonth = false,
@@ -138,7 +136,7 @@ private fun FullMonthCalendarGridMedium(
                                     currentMonth.month == today.month &&
                                     currentMonth.year == today.year
 
-                            DayCellMedium(
+                            DayCell(
                                 date = date,
                                 dayNumber = dayCounter,
                                 isCurrentMonth = true,
@@ -152,7 +150,7 @@ private fun FullMonthCalendarGridMedium(
                         else -> {
                             val nextMonth = currentMonth.plusMonths(1)
                             val date = nextMonth.atDay(nextMonthDayCounter)
-                            DayCellMedium(
+                            DayCell(
                                 date = date,
                                 dayNumber = nextMonthDayCounter,
                                 isCurrentMonth = false,
@@ -175,7 +173,7 @@ private fun FullMonthCalendarGridMedium(
 }
 
 @Composable
-private fun DayCellMedium(
+private fun DayCell(
     date: LocalDate,
     dayNumber: Int,
     isCurrentMonth: Boolean,
@@ -195,7 +193,7 @@ private fun DayCellMedium(
     Box(
         modifier = GlanceModifier
             .fillMaxWidth()
-            .height(32.dp)
+            .height(54.dp)
             .padding(0.5.dp)
             .background(
                 if (isToday) {
@@ -208,7 +206,7 @@ private fun DayCellMedium(
         contentAlignment = Alignment.Center
     ) {
         Column(
-            modifier = GlanceModifier.fillMaxSize().padding(vertical = 1.dp),
+            modifier = GlanceModifier.fillMaxSize().padding(vertical = 2.dp),
             verticalAlignment = Alignment.Top,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
@@ -223,21 +221,23 @@ private fun DayCellMedium(
                         dayOfWeek == 6 -> GlanceTheme.colors.primary // Saturday
                         else -> GlanceTheme.colors.onSurface
                     },
-                    fontSize = 9.sp,
+                    fontSize = 14.sp,
                     fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal
                 )
             )
 
             // Events section below date
             if (events.isNotEmpty() && isCurrentMonth) {
+                Spacer(modifier = GlanceModifier.height(1.dp))
+
                 Column(
                     modifier = GlanceModifier.fillMaxWidth(),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    // Show up to 1 event for Medium widget (space is limited)
-                    events.take(1).forEach { event ->
-                        val truncatedTitle = if (event.title.length > 3) {
-                            event.title.take(3) + "..."
+                    // Show up to 3 events
+                    events.take(3).forEach { event ->
+                        val truncatedTitle = if (event.title.length > 8) {
+                            event.title.take(8) + "..."
                         } else {
                             event.title
                         }
@@ -250,33 +250,34 @@ private fun DayCellMedium(
                                 } else {
                                     GlanceTheme.colors.onSurfaceVariant
                                 },
-                                fontSize = 5.sp,
+                                fontSize = 10.sp,
                                 fontWeight = FontWeight.Normal
                             )
                         )
                     }
 
                     // Show indicator for more events
-                    if (events.size > 1) {
+                    if (events.size > 3) {
                         Text(
-                            text = "+${events.size - 1}",
+                            text = "+${events.size - 3}",
                             style = TextStyle(
                                 color = if (isToday) {
                                     GlanceTheme.colors.onPrimary
                                 } else {
                                     GlanceTheme.colors.primary
                                 },
-                                fontSize = 4.sp,
+                                fontSize = 9.sp,
                                 fontWeight = FontWeight.Bold
                             )
                         )
                     }
                 }
             } else if (events.isNotEmpty() && !isCurrentMonth) {
-                // For non-current month days, show just a tiny dot
+                // For non-current month days, show just a small dot
+                Spacer(modifier = GlanceModifier.height(2.dp))
                 Box(
                     modifier = GlanceModifier
-                        .size(1.dp)
+                        .size(3.dp)
                         .background(GlanceTheme.colors.onSurfaceVariant)
                 ) {}
             }

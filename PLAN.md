@@ -1,236 +1,145 @@
-# MyCal 구현 계획
+# 월달력 위젯 개선 계획
 
-## 1. 프로젝트 아키텍처
+## 요구사항 분석
 
-### 1.1 아키텍처 패턴
-- **MVVM (Model-View-ViewModel)** 패턴 적용
-- **Clean Architecture** 원칙 준수
-- **Repository Pattern** 을 통한 데이터 계층 추상화
+**사용자 요청**: example.jpeg처럼 달력만 보이고, 달력 안에 날짜별 일정이 적혀있는 월달력 위젯
 
-### 1.2 레이어 구조
-```
-presentation/     # UI 레이어 (Compose UI, ViewModel)
-├── screens/     # 각 화면별 Composable
-├── viewmodels/  # 화면별 ViewModel
-├── components/  # 재사용 가능한 UI 컴포넌트
-└── theme/       # 테마, 색상, 타이포그래피
+**현재 상황 분석**:
+- ExtraLargeWidgetContent.kt에 이미 월별 전체 달력 그리드 구현되어 있음
+- 이벤트가 있는 날짜에 작은 점(indicator)만 표시됨
+- 이벤트 제목은 표시되지 않음
+- 다른 크기 위젯(Medium, Large)은 월달력 대신 리스트 형태
 
-domain/          # 비즈니스 로직
-├── models/      # 도메인 모델
-├── usecases/    # 유스케이스
-└── repository/  # 레포지토리 인터페이스
+## 구현 계획
 
-data/            # 데이터 레이어
-├── local/       # 로컬 데이터베이스 (Room)
-├── remote/      # 원격 데이터 (ICS 파싱)
-├── repository/  # 레포지토리 구현체
-└── mapper/      # 데이터 매퍼
+### 1단계: ExtraLargeWidgetContent 개선 (우선순위: 높음)
 
-widget/          # Glance 위젯
-├── receiver/    # 위젯 브로드캐스트 리시버
-├── provider/    # 위젯 프로바이더
-└── ui/          # 위젯 UI 컴포저블
-```
+#### 1.1 DayCell 함수 수정 (`ExtraLargeWidgetContent.kt:175-241`)
+**목표**: 이벤트 점 대신 이벤트 제목을 표시
+- 현재: `hasEvents`로 점만 표시
+- 개선: 실제 이벤트 목록을 받아서 이벤트 제목 표시
 
-## 2. 주요 기능 구현 계획
-
-### 2.1 달력 뷰어
-#### 기능 요구사항
-- 월별/주별/일별 뷰 전환
-- 이벤트 표시 및 관리
-- 스와이프를 통한 날짜 이동
-- 오늘 날짜 강조 표시
-
-#### 구현 세부사항
-- **CalendarScreen**: 메인 달력 화면 Composable
-- **CalendarViewModel**: 달력 상태 관리
-- **CalendarRepository**: 이벤트 데이터 관리
-- **Custom Calendar Composable**:
-  - LazyVerticalGrid를 활용한 월별 뷰
-  - 날짜 셀 커스텀 렌더링
-  - 이벤트 인디케이터 표시
-
-### 2.2 ICS 달력 구독
-#### 기능 요구사항
-- URL을 통한 ICS 파일 가져오기
-- ICS 파싱 및 이벤트 추출
-- 주기적 동기화
-- 다중 캘린더 소스 지원
-
-#### 구현 세부사항
-- **IcsParser**: iCal4j 또는 자체 구현 파서
-- **SyncWorker**: WorkManager를 활용한 백그라운드 동기화
-- **CalendarSourceManager**: 구독 캘린더 관리
-- **데이터베이스 스키마**:
-  ```kotlin
-  @Entity
-  data class CalendarSource(
-      @PrimaryKey val id: String,
-      val url: String,
-      val name: String,
-      val color: Int,
-      val syncEnabled: Boolean,
-      val lastSyncTime: Long
-  )
-
-  @Entity
-  data class Event(
-      @PrimaryKey val id: String,
-      val sourceId: String,
-      val title: String,
-      val description: String?,
-      val startTime: Long,
-      val endTime: Long,
-      val isAllDay: Boolean,
-      val location: String?,
-      val rrule: String? // 반복 규칙
-  )
-  ```
-
-### 2.3 달력 위젯
-#### 기능 요구사항
-- 홈 화면 위젯 제공
-- 다양한 크기 지원 (2x2, 4x2, 4x4)
-- 오늘의 일정 표시
-- 앱 실행 단축키
-
-#### 구현 세부사항
-- **Glance API 활용**:
-  ```kotlin
-  class CalendarWidget : GlanceAppWidget() {
-      override suspend fun provideGlance(context: Context, id: GlanceId) {
-          provideContent {
-              CalendarWidgetContent()
-          }
-      }
-  }
-  ```
-- **위젯 업데이트 Worker**: 주기적 업데이트
-- **위젯 상태 관리**: DataStore 활용
-
-## 3. 개발 단계
-
-### Phase 1: 기초 설정 (1주)
-- [ ] 프로젝트 초기 설정
-- [ ] 의존성 추가 (Compose, Room, Glance, Hilt 등)
-- [ ] 기본 네비게이션 구조 설정
-- [ ] 테마 및 디자인 시스템 구축
-
-### Phase 2: 달력 뷰어 개발 (2-3주)
-- [ ] 달력 UI 컴포넌트 개발
-- [ ] Room 데이터베이스 설정
-- [ ] 이벤트 CRUD 기능
-- [ ] 날짜 선택 및 네비게이션
-- [ ] 뷰 모드 전환 (월/주/일)
-
-### Phase 3: ICS 구독 기능 (2주)
-- [ ] ICS 파서 구현/통합
-- [ ] 네트워크 레이어 구축
-- [ ] 동기화 로직 구현
-- [ ] WorkManager 설정
-- [ ] 구독 관리 UI
-
-### Phase 4: 위젯 개발 (1-2주)
-- [ ] Glance 위젯 기본 구조
-- [ ] 위젯 UI 디자인
-- [ ] 데이터 연동
-- [ ] 위젯 설정 화면
-
-### Phase 5: 마무리 및 최적화 (1주)
-- [ ] 성능 최적화
-- [ ] 테스트 작성
-- [ ] 버그 수정
-- [ ] 릴리즈 준비
-
-## 4. 기술적 고려사항
-
-### 4.1 의존성 관리
+**변경사항**:
 ```kotlin
-dependencies {
-    // Compose
-    implementation("androidx.compose.ui:ui:1.5.4")
-    implementation("androidx.compose.material3:material3:1.1.2")
-    implementation("androidx.navigation:navigation-compose:2.7.5")
+// 현재
+private fun DayCell(
+    ...,
+    hasEvents: Boolean,
+    ...
+)
 
-    // Glance
-    implementation("androidx.glance:glance-appwidget:1.0.0")
+// 개선 후
+private fun DayCell(
+    ...,
+    events: List<WidgetEvent>,
+    ...
+)
+```
 
-    // Room
-    implementation("androidx.room:room-runtime:2.6.0")
-    implementation("androidx.room:room-ktx:2.6.0")
-    kapt("androidx.room:room-compiler:2.6.0")
+#### 1.2 이벤트 텍스트 표시 로직 추가
+- 한 날짜에 최대 2-3개 이벤트 제목 표시
+- 글자 크기: 8-9sp (작은 크기)
+- 긴 제목은 줄임표(...) 처리
+- 다중 이벤트시 줄바꿈으로 처리
 
-    // Hilt
-    implementation("com.google.dagger:hilt-android:2.48")
-    kapt("com.google.dagger:hilt-compiler:2.48")
+#### 1.3 셀 크기 조정
+- 현재 height: 36dp → 42-48dp로 확장
+- 이벤트 텍스트가 들어갈 공간 확보
 
-    // Networking
-    implementation("com.squareup.retrofit2:retrofit:2.9.0")
-    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+### 2단계: 이벤트 데이터 로딩 확인 (우선순위: 높음)
 
-    // WorkManager
-    implementation("androidx.work:work-runtime-ktx:2.9.0")
+#### 2.1 CalendarWidgetDataProvider 점검 (`CalendarWidgetDataProvider.kt`)
+**확인사항**:
+- `monthEvents` 맵이 제대로 채워지는지 확인
+- 날짜 키 형식이 `hasEventsOnDate` 함수와 일치하는지 확인 (`YYYY-MM-DD` 형식)
 
-    // Date/Time
-    implementation("org.threeten:threetenbp:1.6.8")
+#### 2.2 날짜별 이벤트 조회 로직 개선
+- `getEventsForDate()` 헬퍼 함수 추가
+- 여러 이벤트 소스 통합 (monthEvents, weekEvents, todayEvents)
+
+### 3단계: Medium/Large 위젯 월달력 옵션 추가 (우선순위: 중간)
+
+#### 3.1 위젯 모드 선택 기능
+**CalendarWidgetState 확장**:
+```kotlin
+enum class WidgetViewMode {
+    TODAY,      // 기존
+    WEEK,       // 기존
+    MONTH,      // 기존
+    MONTH_GRID  // 새로 추가: 월달력 그리드 표시
 }
 ```
 
-### 4.2 성능 최적화
-- **LazyColumn/LazyGrid** 활용으로 대량 이벤트 처리
-- **Room 쿼리 최적화** (인덱싱, 페이징)
-- **Compose 리컴포지션 최소화**
-- **이미지 캐싱** (Coil 라이브러리)
+#### 3.2 MediumWidgetContent 수정
+- 현재: 오늘 이벤트 리스트만 표시
+- 추가: `MONTH_GRID` 모드일 때 작은 월달력 표시
 
-### 4.3 보안 고려사항
-- HTTPS만 허용하여 ICS URL 가져오기
-- 민감한 정보 암호화 저장
-- ProGuard 규칙 설정
+#### 3.3 LargeWidgetContent 수정
+- 현재: 미니 달력 + 오늘 이벤트 요약
+- 개선: 미니 달력을 풀사이즈로 확장하여 이벤트 제목 표시
 
-## 5. 테스트 계획
+### 4단계: UI/UX 최적화 (우선순위: 낮음)
 
-### 5.1 단위 테스트
-- ViewModel 로직 테스트
-- Repository 테스트
-- ICS 파서 테스트
-- 날짜 계산 로직 테스트
+#### 4.1 색상 및 테마 개선
+- 이벤트 텍스트 색상 최적화
+- 주말(일요일/토요일) 색상 구분 유지
+- 어두운 테마 대응
 
-### 5.2 UI 테스트
-- Compose UI 테스트
-- 네비게이션 테스트
-- 사용자 상호작용 테스트
+#### 4.2 성능 최적화
+- 이벤트가 많은 날짜의 렌더링 성능 확인
+- 메모리 사용량 최적화
 
-### 5.3 통합 테스트
-- 데이터베이스 작업 테스트
-- 동기화 프로세스 테스트
-- 위젯 업데이트 테스트
+## 구현 순서 및 일정
 
-## 6. 추가 개선 사항 (향후 업데이트)
+### Phase 1: 핵심 기능 구현 (1-2시간)
+1. `hasEventsOnDate()` → `getEventsForDate()` 함수 변경
+2. `DayCell` 함수 파라미터 및 UI 수정
+3. 이벤트 텍스트 표시 로직 구현
 
-- **다크 모드 지원**
-- **알림 기능**
-- **Google Calendar 연동**
-- **이벤트 검색 기능**
-- **반복 일정 지원**
-- **카테고리/태그 기능**
-- **백업 및 복원**
-- **다국어 지원**
+### Phase 2: 데이터 검증 및 디버깅 (30분)
+1. CalendarWidgetDataProvider 동작 확인
+2. 실제 이벤트 데이터로 테스트
+3. 로그 추가 및 디버깅
 
-## 7. 리스크 관리
+### Phase 3: 확장 기능 (1시간)
+1. Medium/Large 위젯 월달력 지원
+2. 위젯 크기별 최적화
 
-### 기술적 리스크
-- ICS 파싱의 복잡성 → iCal4j 라이브러리 활용 고려
-- Glance API의 제한사항 → 대체 위젯 솔루션 준비
-- 대량 이벤트 성능 → 페이징 및 가상화 적용
+## 주의사항
 
-### 일정 리스크
-- 각 단계별 버퍼 시간 확보
-- MVP 우선 개발 후 점진적 기능 추가
-- 주요 마일스톤별 검토 및 조정
+### 기술적 제약
+- Glance API 제한사항 (Compose 대비 기능 제한)
+- 위젯 크기 제한으로 인한 텍스트 표시 한계
+- 메모리 사용량 고려
 
-## 8. 문서화
+### UX 고려사항
+- 작은 화면에서 가독성 확보
+- 터치 영역 충분히 확보 (최소 48dp)
+- 일정이 많은 날짜의 우선순위 표시 규칙
 
-- API 문서 (KDoc)
-- 사용자 가이드
-- 개발자 문서
-- 변경 로그 관리
+## 테스트 계획
+
+### 단위 테스트
+1. `getEventsForDate()` 함수 정확성
+2. 긴 이벤트 제목 줄임표 처리
+3. 다중 이벤트 표시 레이아웃
+
+### 통합 테스트
+1. 실제 ICS 데이터로 위젯 렌더링
+2. 다양한 기기 크기에서 확인
+3. 라이트/다크 테마 확인
+
+### 사용성 테스트
+1. 터치 반응성 확인
+2. 가독성 검증
+3. 배터리 사용량 체크
+
+## 예상 결과
+
+구현 완료 후 ExtraLarge 위젯에서:
+- 월별 달력 그리드 표시 ✅
+- 각 날짜에 이벤트 제목 표시 ✅
+- example.jpeg와 유사한 UI 제공 ✅
+- 터치 시 메인 앱 해당 날짜로 이동 ✅
+
+Medium/Large 위젯에서도 옵션으로 월달력 제공 가능.

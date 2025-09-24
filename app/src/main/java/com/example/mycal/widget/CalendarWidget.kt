@@ -25,7 +25,8 @@ class CalendarWidget : GlanceAppWidget() {
         setOf(
             DpSize(110.dp, 110.dp),  // Small (2x2)
             DpSize(250.dp, 110.dp),  // Medium (4x2)
-            DpSize(250.dp, 250.dp)   // Large (4x4)
+            DpSize(250.dp, 250.dp),  // Large (4x4)
+            DpSize(310.dp, 310.dp)   // Extra Large (5x5)
         )
     )
 

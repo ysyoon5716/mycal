@@ -7,6 +7,7 @@ data class CalendarWidgetState(
     val selectedDateMillis: Long = System.currentTimeMillis(),
     val todayEvents: List<WidgetEvent> = emptyList(),
     val weekEvents: Map<String, List<WidgetEvent>> = emptyMap(),
+    val monthEvents: Map<String, List<WidgetEvent>> = emptyMap(), // Added for full month view
     val viewMode: WidgetViewMode = WidgetViewMode.TODAY,
     val lastUpdateTimeMillis: Long = System.currentTimeMillis()
 )

@@ -42,6 +42,10 @@ fun CalendarWidgetContent() {
                 // Medium widget (4x2)
                 MediumWidgetContent(state)
             }
+            size.width >= 310.dp && size.height >= 310.dp -> {
+                // Extra Large widget (5x5)
+                ExtraLargeWidgetContent(state)
+            }
             else -> {
                 // Large widget (4x4)
                 LargeWidgetContent(state)
