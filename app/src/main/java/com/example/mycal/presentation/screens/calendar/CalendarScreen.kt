@@ -62,7 +62,7 @@ fun CalendarScreen(
                 CalendarViewMode.MONTH -> {
                     MonthViewWithSwipe(
                         currentMonth = uiState.currentMonth,
-                        calendarDates = uiState.calendarDates,
+                        monthDataMap = uiState.monthDataMap,
                         onDateSelected = viewModel::onDateSelected,
                         onMonthChanged = viewModel::onMonthChanged,
                         modifier = Modifier.fillMaxSize()
@@ -182,7 +182,7 @@ fun CalendarViewModeTabs(
 @Composable
 fun MonthViewWithSwipe(
     currentMonth: YearMonth,
-    calendarDates: List<com.example.mycal.domain.model.CalendarDate>,
+    monthDataMap: Map<YearMonth, List<com.example.mycal.domain.model.CalendarDate>>,
     onDateSelected: (org.threeten.bp.LocalDate) -> Unit,
     onMonthChanged: (YearMonth) -> Unit,
     modifier: Modifier = Modifier
@@ -216,15 +216,18 @@ fun MonthViewWithSwipe(
             val monthOffset = page - initialPage
             val displayMonth = YearMonth.now().plusMonths(monthOffset.toLong())
 
-            if (displayMonth == currentMonth) {
-                // Use the loaded calendar dates for the current month
+            // Check if we have cached data for this month
+            val monthData = monthDataMap[displayMonth]
+
+            if (monthData != null) {
+                // Use the cached calendar dates for this month
                 CalendarGrid(
-                    dates = calendarDates,
+                    dates = monthData,
                     onDateClick = onDateSelected,
                     modifier = Modifier.fillMaxSize()
                 )
             } else {
-                // Show a placeholder or loading state for other months
+                // Show loading state for months without cached data
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center

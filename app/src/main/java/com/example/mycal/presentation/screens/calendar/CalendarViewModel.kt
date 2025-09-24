@@ -21,8 +21,10 @@ class CalendarViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(CalendarUiState())
     val uiState: StateFlow<CalendarUiState> = _uiState.asStateFlow()
 
+    private val monthDataCache = mutableMapOf<YearMonth, List<CalendarDate>>()
+
     init {
-        loadCurrentMonth()
+        loadCurrentMonthWithAdjacent()
     }
 
     fun onDateSelected(date: LocalDate) {
@@ -35,7 +37,7 @@ class CalendarViewModel @Inject constructor(
 
     fun onMonthChanged(yearMonth: YearMonth) {
         _uiState.update { it.copy(currentMonth = yearMonth) }
-        loadMonthData(yearMonth)
+        loadMonthDataWithAdjacent(yearMonth)
     }
 
     fun navigateToPreviousMonth() {
@@ -56,37 +58,95 @@ class CalendarViewModel @Inject constructor(
                 selectedDate = today
             )
         }
-        loadCurrentMonth()
+        loadCurrentMonthWithAdjacent()
     }
 
     private fun loadCurrentMonth() {
         loadMonthData(_uiState.value.currentMonth)
     }
 
+    private fun loadCurrentMonthWithAdjacent() {
+        val currentMonth = _uiState.value.currentMonth
+        loadMonthDataWithAdjacent(currentMonth)
+    }
+
+    private fun loadMonthDataWithAdjacent(yearMonth: YearMonth) {
+        // Load current month and adjacent months
+        val monthsToLoad = listOf(
+            yearMonth.minusMonths(1),
+            yearMonth,
+            yearMonth.plusMonths(1)
+        )
+
+        monthsToLoad.forEach { month ->
+            if (!monthDataCache.containsKey(month)) {
+                loadMonthData(month)
+            }
+        }
+
+        // Update UI state with cached data
+        updateUiStateFromCache()
+    }
+
     private fun loadMonthData(yearMonth: YearMonth) {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
+            // Only show loading for the current month
+            if (yearMonth == _uiState.value.currentMonth) {
+                _uiState.update { it.copy(isLoading = true) }
+            }
 
             try {
                 getMonthEventsUseCase(yearMonth.year, yearMonth.monthValue)
                     .collect { events ->
                         val calendarDates = generateCalendarDates(yearMonth, events)
-                        _uiState.update {
-                            it.copy(
-                                calendarDates = calendarDates,
-                                events = events,
-                                isLoading = false,
-                                error = null
-                            )
+
+                        // Cache the data
+                        monthDataCache[yearMonth] = calendarDates
+
+                        // Update UI state
+                        if (yearMonth == _uiState.value.currentMonth) {
+                            _uiState.update {
+                                it.copy(
+                                    calendarDates = calendarDates,
+                                    events = events,
+                                    monthDataMap = monthDataCache.toMap(),
+                                    isLoading = false,
+                                    error = null
+                                )
+                            }
+                        } else {
+                            // Just update the cache in UI state
+                            _uiState.update {
+                                it.copy(
+                                    monthDataMap = monthDataCache.toMap()
+                                )
+                            }
                         }
                     }
             } catch (e: Exception) {
-                _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        error = e.message
-                    )
+                if (yearMonth == _uiState.value.currentMonth) {
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            error = e.message
+                        )
+                    }
                 }
+            }
+        }
+    }
+
+    private fun updateUiStateFromCache() {
+        val currentMonth = _uiState.value.currentMonth
+        val currentMonthData = monthDataCache[currentMonth]
+
+        if (currentMonthData != null) {
+            _uiState.update {
+                it.copy(
+                    calendarDates = currentMonthData,
+                    monthDataMap = monthDataCache.toMap(),
+                    isLoading = false
+                )
             }
         }
     }

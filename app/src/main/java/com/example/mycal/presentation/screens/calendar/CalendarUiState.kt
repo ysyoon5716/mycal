@@ -12,6 +12,7 @@ data class CalendarUiState(
     val viewMode: CalendarViewMode = CalendarViewMode.MONTH,
     val calendarDates: List<CalendarDate> = emptyList(),
     val events: List<CalendarEvent> = emptyList(),
+    val monthDataMap: Map<YearMonth, List<CalendarDate>> = emptyMap(),
     val isLoading: Boolean = false,
     val error: String? = null
 )

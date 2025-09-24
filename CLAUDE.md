@@ -42,6 +42,7 @@ $ADB -s emulator-5554 shell monkey -p com.example.mycal -c android.intent.catego
 ### Gradle 명령어
 ```bash
 # Android Studio의 Java runtime 사용 필요
+
 # 빌드
 ./gradlew build
 
