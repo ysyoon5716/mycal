@@ -1,7 +1,7 @@
 # MyCal
 
 ## Overview
-Android Calendar Application
+Android Calendar Application with Widget Support
 
 ## Technology Stack
 - Kotlin
@@ -20,6 +20,12 @@ Android Calendar Application
     - URL Based Subscription
     - Automatic Sync (15min)
     - Multiple Subscription
+- Month Calendar Widget
+    - Full month view (7x6 grid)
+    - Event titles display (up to 2 per day)
+    - Month navigation
+    - Dark theme
+    - Auto-updates after sync
 
 
 ## Info
@@ -123,8 +129,20 @@ com.example.mycal/
 │   │   └── subscription/   # Subscription Management Screen
 │   └── theme/              # Theme Configuration
 ├── widget/                 # Glance Widget
-│   ├── state/              # Widget State
-│   └── ui/                 # Widget UI Components
+│   ├── model/              # Widget Data Models
+│   │   ├── WidgetCalendarDate.kt
+│   │   └── WidgetEvent.kt
+│   ├── state/              # Widget State Management
+│   │   ├── CalendarWidgetState.kt
+│   │   └── CalendarWidgetStateDefinition.kt
+│   ├── ui/                 # Widget UI Components
+│   │   ├── CalendarMonthWidget.kt
+│   │   ├── WidgetCalendarGrid.kt
+│   │   ├── WidgetDayCell.kt
+│   │   └── WidgetHeader.kt
+│   ├── CalendarAppWidget.kt        # Main Widget Implementation
+│   ├── CalendarWidgetReceiver.kt   # Widget Broadcast Receiver
+│   └── CalendarWidgetWorker.kt     # Widget Update Worker
 ├── di/                     # Hilt Modules
 ├── MainActivity.kt
 └── MyCalApplication.kt
@@ -148,11 +166,16 @@ com.example.mycal/
 - **CalendarSyncWorker**: WorkManager Worker (15-minute interval)
 - **CalendarSyncManager**: Synchronization management
 
-#### Widget
-- **CalendarWidget**: GlanceAppWidget implementation
-- **CalendarWidgetReceiver**: Widget BroadcastReceiver
-- **CalendarWidgetWorker**: Widget update Worker
-- **CalendarWidgetDataProvider**: Widget data provider
+#### Widget (Glance)
+- **CalendarAppWidget**: Main GlanceAppWidget implementation
+- **CalendarWidgetReceiver**: Widget BroadcastReceiver for update triggers
+- **CalendarWidgetWorker**: Worker for fetching and updating widget data
+- **CalendarWidgetState**: Widget state with month/year and calendar data
+- **CalendarWidgetStateDefinition**: State serialization with DataStore
+- **CalendarMonthWidget**: Main widget UI composable
+- **WidgetCalendarGrid**: 7x6 grid layout for month view
+- **WidgetDayCell**: Individual day cell with event titles
+- **WidgetHeader**: Month navigation and display
 
 #### DI Modules
 - **DatabaseModule**: Provides Room Database
@@ -169,9 +192,17 @@ com.example.mycal/
 
 ### Widget Development
 - Glance API is similar to Compose but limited
-- Provide different UI for each widget size (Small/Medium/Large)
-- Use WorkManager for widget updates
-- Handle click events with PendingIntent
+- Use ColorProvider instead of Color directly for Glance
+- Widget shows event titles (not just dots) - up to 2 per day
+- Month navigation using actionRunCallback with ActionCallback
+- Widget state persisted using DataStore with custom serializer
+- Updates triggered by:
+  - CalendarSyncWorker completion
+  - MainActivity onResume
+  - System events (boot, time change)
+  - Manual navigation between months
+- Use LocalContext.current for accessing context in Glance composables
+- Widget size: minWidth="250dp" minHeight="250dp" for proper month view
 
 ### Synchronization
 - Background sync every 15 minutes using WorkManager
@@ -198,9 +229,11 @@ com.example.mycal/
 - Timezone: Handle TZID
 
 ### Widget Not Updating
-- Check GlanceAppWidgetManager.update() call
-- Check WorkManager constraints
-- Check Widget Provider registration
+- Check updateAppWidgetState requires definition parameter: updateAppWidgetState(context, definition, glanceId)
+- Verify widget receiver is properly registered in AndroidManifest.xml
+- Ensure CalendarWidgetWorker is @HiltWorker annotated
+- Check that widget broadcast intent action matches receiver filter
+- Use CalendarAppWidget().updateAll(context) after state update
 
 ### Sync Failure
 - Check network permissions
