@@ -54,6 +54,9 @@ fun CalendarMonthWidget(
                         modifier = GlanceModifier.fillMaxWidth()
                     )
 
+                    // Add spacing between header and calendar grid
+                    Spacer(modifier = GlanceModifier.height(8.dp))
+
                     // Calendar grid
                     WidgetCalendarGrid(
                         dates = state.calendarDates,
