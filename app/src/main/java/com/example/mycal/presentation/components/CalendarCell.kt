@@ -71,9 +71,9 @@ fun CalendarCell(
                     horizontalArrangement = Arrangement.spacedBy(2.dp)
                 ) {
                     val eventsToShow = minOf(date.events.size, 3)
-                    repeat(eventsToShow) {
+                    for (i in 0 until eventsToShow) {
                         EventDot(
-                            color = CalendarEventIndicator,
+                            color = Color(date.events[i].color),
                             modifier = Modifier.size(4.dp)
                         )
                     }
