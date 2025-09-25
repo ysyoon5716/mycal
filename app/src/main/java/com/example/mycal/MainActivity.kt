@@ -1,5 +1,6 @@
 package com.example.mycal
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -23,6 +24,8 @@ import androidx.navigation.compose.rememberNavController
 import com.example.mycal.presentation.screens.calendar.CalendarScreen
 import com.example.mycal.presentation.screens.subscription.SubscriptionListScreen
 import com.example.mycal.presentation.theme.MyCalTheme
+import com.example.mycal.widget.CalendarAppWidget
+import com.example.mycal.widget.CalendarWidgetReceiver
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -41,6 +44,19 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // Update widget when app becomes visible
+        updateWidget()
+    }
+
+    private fun updateWidget() {
+        val intent = Intent(this, CalendarWidgetReceiver::class.java).apply {
+            action = CalendarAppWidget.ACTION_UPDATE_WIDGET
+        }
+        sendBroadcast(intent)
     }
 }
 

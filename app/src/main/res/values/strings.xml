@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">MyCal</string>
+    <string name="widget_description">월간 캘린더 위젯</string>
 </resources>

@@ -1,0 +1,125 @@
+package com.example.mycal.widget.ui
+
+import android.content.Intent
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.glance.GlanceModifier
+import androidx.glance.LocalContext
+import androidx.glance.action.clickable
+import androidx.glance.appwidget.action.actionStartActivity
+import androidx.glance.unit.ColorProvider
+import androidx.glance.appwidget.cornerRadius
+import androidx.glance.background
+import androidx.glance.layout.*
+import androidx.glance.text.FontWeight
+import androidx.glance.text.Text
+import androidx.glance.text.TextAlign
+import androidx.glance.text.TextStyle
+import com.example.mycal.MainActivity
+import com.example.mycal.widget.model.WidgetCalendarDate
+
+@Composable
+fun WidgetDayCell(
+    date: WidgetCalendarDate,
+    modifier: GlanceModifier = GlanceModifier
+) {
+    val backgroundColor = when {
+        date.isToday -> ColorProvider(Color(0xFF424242))
+        else -> ColorProvider(Color.Transparent)
+    }
+
+    val dateTextColor = when {
+        date.isToday -> ColorProvider(Color.White)
+        !date.isCurrentMonth -> ColorProvider(Color(0xFF757575))
+        date.isSunday -> ColorProvider(Color(0xFFEF5350))
+        date.isSaturday -> ColorProvider(Color(0xFF42A5F5))
+        else -> ColorProvider(Color(0xFFE0E0E0))
+    }
+
+    Box(
+        modifier = modifier
+            .cornerRadius(4.dp)
+            .background(backgroundColor)
+            .clickable(actionStartActivity(Intent(LocalContext.current, MainActivity::class.java)))
+            .padding(2.dp),
+        contentAlignment = Alignment.TopStart
+    ) {
+        Column(
+            modifier = GlanceModifier.fillMaxSize(),
+            verticalAlignment = Alignment.Top,
+            horizontalAlignment = Alignment.Start
+        ) {
+            // Date number
+            Box(
+                modifier = GlanceModifier
+                    .fillMaxWidth()
+                    .height(16.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = date.dayOfMonth.toString(),
+                    style = TextStyle(
+                        color = dateTextColor,
+                        fontSize = 12.sp,
+                        fontWeight = if (date.isToday) FontWeight.Bold else FontWeight.Normal,
+                        textAlign = TextAlign.Center
+                    )
+                )
+            }
+
+            // Events list
+            if (date.hasEvents) {
+                Spacer(GlanceModifier.height(1.dp))
+                val displayEvents = date.getDisplayEvents(2)
+
+                Column(
+                    modifier = GlanceModifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.Top
+                ) {
+                    displayEvents.forEach { event ->
+                        Row(
+                            modifier = GlanceModifier.fillMaxWidth().padding(horizontal = 1.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            // Event indicator dot
+                            Box(
+                                modifier = GlanceModifier
+                                    .size(3.dp)
+                                    .cornerRadius(2.dp)
+                                    .background(ColorProvider(Color(event.color)))
+                            ) {}
+
+                            Spacer(GlanceModifier.width(2.dp))
+
+                            // Event title
+                            Text(
+                                text = event.getTruncatedTitle(8),
+                                style = TextStyle(
+                                    color = ColorProvider(Color(0xFFBDBDBD)),
+                                    fontSize = 8.sp,
+                                    fontWeight = FontWeight.Normal
+                                ),
+                                maxLines = 1
+                            )
+                        }
+                    }
+
+                    // More events indicator
+                    if (date.hasMoreEvents(2)) {
+                        Text(
+                            text = "+${date.getMoreEventsCount(2)}",
+                            style = TextStyle(
+                                color = ColorProvider(Color(0xFF9E9E9E)),
+                                fontSize = 8.sp,
+                                fontWeight = FontWeight.Normal
+                            ),
+                            modifier = GlanceModifier.padding(start = 5.dp)
+                        )
+                    }
+                }
+            }
+        }
+    }
+}

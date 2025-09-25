@@ -1,6 +1,7 @@
 package com.example.mycal.data.sync
 
 import android.content.Context
+import android.content.Intent
 import android.util.Log
 import androidx.hilt.work.HiltWorker
 import androidx.work.*
@@ -8,6 +9,8 @@ import com.example.mycal.data.local.dao.CalendarSourceDao
 import com.example.mycal.data.local.dao.EventDao
 import com.example.mycal.data.remote.datasource.IcsRemoteDataSource
 import com.example.mycal.data.remote.datasource.IcsResult
+import com.example.mycal.widget.CalendarAppWidget
+import com.example.mycal.widget.CalendarWidgetReceiver
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.Dispatchers
@@ -33,6 +36,9 @@ class CalendarSyncWorker @AssistedInject constructor(
             } else {
                 syncAllSources()
             }
+
+            // Trigger widget update after successful sync
+            updateWidgets()
 
             Log.d(TAG, "Sync work completed successfully")
             Result.success()
@@ -96,6 +102,18 @@ class CalendarSyncWorker @AssistedInject constructor(
                     // Continue syncing other sources even if one fails
                 }
             }
+        }
+    }
+
+    private fun updateWidgets() {
+        try {
+            val intent = Intent(applicationContext, CalendarWidgetReceiver::class.java).apply {
+                action = CalendarAppWidget.ACTION_UPDATE_WIDGET
+            }
+            applicationContext.sendBroadcast(intent)
+            Log.d(TAG, "Widget update broadcast sent")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to send widget update broadcast", e)
         }
     }
 
