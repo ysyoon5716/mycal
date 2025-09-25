@@ -2,6 +2,7 @@ package com.example.mycal.presentation.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -93,13 +94,14 @@ fun EventCard(event: CalendarEvent) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .height(IntrinsicSize.Min)
                 .padding(12.dp)
         ) {
             // 이벤트 색상 표시
             Box(
                 modifier = Modifier
                     .width(4.dp)
-                    .height(60.dp)
+                    .fillMaxHeight()
                     .clip(RoundedCornerShape(2.dp))
                     .background(Color(event.color))
             )
@@ -193,7 +195,7 @@ fun EventCard(event: CalendarEvent) {
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             maxLines = 2,
-                            overflow = TextOverflow.Ellipsis
+                            overflow = TextOverflow.Clip
                         )
                     }
                 }
