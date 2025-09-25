@@ -29,8 +29,7 @@ fun WidgetHeader(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 8.dp, vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalAlignment = Alignment.CenterHorizontally
+        verticalAlignment = Alignment.CenterVertically
     ) {
         // Previous month button
         Text(
@@ -42,28 +41,24 @@ fun WidgetHeader(
             ),
             modifier = GlanceModifier
                 .clickable(onPreviousMonth)
-                .padding(8.dp)
+                .padding(4.dp)
         )
 
-        Spacer(GlanceModifier.defaultWeight())
+        // Small fixed spacer
+        Spacer(GlanceModifier.width(8.dp))
 
-        // Month and year
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(
-                text = getKoreanMonthName(monthName),
-                style = TextStyle(
-                    color = ColorProvider(Color.White),
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    textAlign = TextAlign.Center
-                )
+        // Month and year - no weight, just natural width
+        Text(
+            text = getKoreanMonthName(monthName),
+            style = TextStyle(
+                color = ColorProvider(Color.White),
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold
             )
-        }
+        )
 
-        Spacer(GlanceModifier.defaultWeight())
+        // Small fixed spacer before next button
+        Spacer(GlanceModifier.width(8.dp))
 
         // Next month button
         Text(
@@ -75,8 +70,11 @@ fun WidgetHeader(
             ),
             modifier = GlanceModifier
                 .clickable(onNextMonth)
-                .padding(8.dp)
+                .padding(4.dp)
         )
+
+        // Flexible spacer to push add event button to the right
+        Spacer(GlanceModifier.defaultWeight())
 
         // Add event button
         Box(
