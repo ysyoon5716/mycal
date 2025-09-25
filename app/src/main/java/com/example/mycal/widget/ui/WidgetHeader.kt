@@ -15,6 +15,10 @@ import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextAlign
 import androidx.glance.text.TextStyle
+import androidx.glance.Image
+import androidx.glance.ImageProvider
+import androidx.glance.ColorFilter
+import com.example.mycal.R
 
 @Composable
 fun WidgetHeader(
@@ -32,14 +36,12 @@ fun WidgetHeader(
         verticalAlignment = Alignment.CenterVertically
     ) {
         // Previous month button
-        Text(
-            text = "◀",
-            style = TextStyle(
-                color = ColorProvider(Color(0xFFE0E0E0)),
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold
-            ),
+        Image(
+            provider = ImageProvider(R.drawable.ic_arrow_back_ios),
+            contentDescription = "Previous month",
+            colorFilter = ColorFilter.tint(ColorProvider(Color(0xFFE0E0E0))),
             modifier = GlanceModifier
+                .size(26.dp)
                 .clickable(onPreviousMonth)
                 .padding(4.dp)
         )
@@ -52,7 +54,7 @@ fun WidgetHeader(
             text = getKoreanMonthName(monthName),
             style = TextStyle(
                 color = ColorProvider(Color.White),
-                fontSize = 16.sp,
+                fontSize = 14.sp,
                 fontWeight = FontWeight.Bold
             )
         )
@@ -61,39 +63,18 @@ fun WidgetHeader(
         Spacer(GlanceModifier.width(8.dp))
 
         // Next month button
-        Text(
-            text = "▶",
-            style = TextStyle(
-                color = ColorProvider(Color(0xFFE0E0E0)),
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold
-            ),
+        Image(
+            provider = ImageProvider(R.drawable.ic_arrow_forward_ios),
+            contentDescription = "Next month",
+            colorFilter = ColorFilter.tint(ColorProvider(Color(0xFFE0E0E0))),
             modifier = GlanceModifier
+                .size(26.dp)
                 .clickable(onNextMonth)
                 .padding(4.dp)
         )
 
         // Flexible spacer to push add event button to the right
         Spacer(GlanceModifier.defaultWeight())
-
-        // Add event button
-        Box(
-            modifier = GlanceModifier
-                .size(24.dp)
-                .clickable(onAddEvent)
-                .padding(4.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = "24",
-                style = TextStyle(
-                    color = ColorProvider(Color.White),
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold,
-                    textAlign = TextAlign.Center
-                )
-            )
-        }
     }
 }
 
