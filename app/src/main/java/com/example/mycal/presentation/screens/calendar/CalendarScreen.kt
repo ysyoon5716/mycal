@@ -33,9 +33,17 @@ import java.util.Locale
 @Composable
 fun CalendarScreen(
     modifier: Modifier = Modifier,
+    initialDate: LocalDate? = null,
     onNavigateToSubscriptions: () -> Unit = {},
     viewModel: CalendarViewModel = hiltViewModel()
 ) {
+    // Set initial date if provided
+    LaunchedEffect(initialDate) {
+        initialDate?.let {
+            viewModel.setInitialDate(it)
+        }
+    }
+
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val selectedDateEvents by viewModel.selectedDateEvents.collectAsStateWithLifecycle()
 
@@ -173,17 +181,35 @@ fun MonthViewWithSwipe(
     modifier: Modifier = Modifier
 ) {
     val coroutineScope = rememberCoroutineScope()
-    // Start at a large number to allow swiping in both directions
-    val initialPage = 100000
+    // Use a fixed reference point for calculations
+    val referenceMonth = YearMonth.now()
+    val centerPage = 100000
+
+    // Calculate initial page based on the difference between currentMonth and reference
+    val monthsDiff = currentMonth.year * 12 + currentMonth.monthValue -
+                     (referenceMonth.year * 12 + referenceMonth.monthValue)
+    val initialPage = centerPage + monthsDiff
+
     val pagerState = rememberPagerState(
         initialPage = initialPage,
         pageCount = { 200000 } // Large number to simulate infinite scrolling
     )
 
-    // Track the current page to detect page changes
+    // Sync pager position when currentMonth changes (e.g., from widget click or navigation)
+    LaunchedEffect(currentMonth) {
+        val targetMonthsDiff = currentMonth.year * 12 + currentMonth.monthValue -
+                              (referenceMonth.year * 12 + referenceMonth.monthValue)
+        val targetPage = centerPage + targetMonthsDiff
+
+        if (pagerState.currentPage != targetPage) {
+            pagerState.animateScrollToPage(targetPage)
+        }
+    }
+
+    // Track the current page to detect page changes from swiping
     LaunchedEffect(pagerState.currentPage) {
-        val monthOffset = pagerState.currentPage - initialPage
-        val newMonth = YearMonth.now().plusMonths(monthOffset.toLong())
+        val monthOffset = pagerState.currentPage - centerPage
+        val newMonth = referenceMonth.plusMonths(monthOffset.toLong())
         if (newMonth != currentMonth) {
             onMonthChanged(newMonth)
         }
@@ -198,8 +224,8 @@ fun MonthViewWithSwipe(
             state = pagerState,
             modifier = Modifier.fillMaxSize()
         ) { page ->
-            val monthOffset = page - initialPage
-            val displayMonth = YearMonth.now().plusMonths(monthOffset.toLong())
+            val monthOffset = page - centerPage
+            val displayMonth = referenceMonth.plusMonths(monthOffset.toLong())
 
             // Check if we have cached data for this month
             val monthData = monthDataMap[displayMonth]

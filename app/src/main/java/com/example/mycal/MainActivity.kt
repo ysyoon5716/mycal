@@ -34,13 +34,24 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
+        // Extract date from intent if available
+        val selectedYear = intent.getIntExtra("selected_year", -1)
+        val selectedMonth = intent.getIntExtra("selected_month", -1)
+        val selectedDay = intent.getIntExtra("selected_day", -1)
+
+        val initialDate = if (selectedYear != -1 && selectedMonth != -1 && selectedDay != -1) {
+            org.threeten.bp.LocalDate.of(selectedYear, selectedMonth, selectedDay)
+        } else {
+            null
+        }
+
         setContent {
             MyCalTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    CalendarApp()
+                    CalendarApp(initialDate = initialDate)
                 }
             }
         }
@@ -61,7 +72,7 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun CalendarApp() {
+fun CalendarApp(initialDate: org.threeten.bp.LocalDate? = null) {
     val navController = rememberNavController()
 
     NavHost(
@@ -71,6 +82,7 @@ fun CalendarApp() {
         composable("calendar") {
             CalendarScreen(
                 modifier = Modifier.fillMaxSize(),
+                initialDate = initialDate,
                 onNavigateToSubscriptions = {
                     navController.navigate("subscriptions")
                 }

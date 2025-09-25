@@ -40,6 +40,7 @@ class CalendarViewModel @Inject constructor(
     private val monthDataCache = mutableMapOf<YearMonth, List<CalendarDate>>()
     private val monthLoadingJobs = mutableMapOf<YearMonth, Job>()
     private var currentMonthSubscription: Job? = null
+    private var hasInitialDateBeenSet = false
 
     init {
         loadCurrentMonthWithAdjacent()
@@ -125,6 +126,39 @@ class CalendarViewModel @Inject constructor(
                     Log.d(TAG, "DB Event: ${event.title}, Start: $startDate, Source: ${event.sourceId}")
                 }
             }
+        }
+    }
+
+    fun setInitialDate(date: LocalDate) {
+        // Only set the initial date once to avoid re-setting on recomposition
+        if (hasInitialDateBeenSet) return
+        hasInitialDateBeenSet = true
+
+        Log.d(TAG, "Setting initial date: $date")
+
+        val targetMonth = YearMonth.from(date)
+
+        // Update the UI state with the selected date and month
+        _uiState.update { currentState ->
+            currentState.copy(
+                selectedDate = date,
+                currentMonth = targetMonth
+            )
+        }
+
+        // Load the month data for the target month and adjacent months
+        loadMonthDataWithAdjacent(targetMonth)
+
+        // Update selected date events after loading
+        viewModelScope.launch {
+            delay(500) // Give time for data to load
+            updateSelectedDateEvents()
+        }
+
+        // Start observing the new month after loading
+        viewModelScope.launch {
+            delay(1500) // Wait for initial load
+            startObservingCurrentMonth()
         }
     }
 

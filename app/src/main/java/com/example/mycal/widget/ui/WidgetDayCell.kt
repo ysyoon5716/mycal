@@ -47,7 +47,11 @@ fun WidgetDayCell(
                     .fillMaxSize()
                     .cornerRadius(3.dp)
                     .background(ColorProvider(Color(0xFF121212)))  // Dark background inside border
-                    .clickable(actionStartActivity(Intent(LocalContext.current, MainActivity::class.java)))
+                    .clickable(actionStartActivity(Intent(LocalContext.current, MainActivity::class.java).apply {
+                    putExtra("selected_year", date.year)
+                    putExtra("selected_month", date.month)
+                    putExtra("selected_day", date.dayOfMonth)
+                }))
                     .padding(2.dp),
                 contentAlignment = Alignment.TopStart
             ) {
@@ -59,7 +63,11 @@ fun WidgetDayCell(
             modifier = modifier
                 .cornerRadius(4.dp)
                 .background(ColorProvider(Color.Transparent))
-                .clickable(actionStartActivity(Intent(LocalContext.current, MainActivity::class.java)))
+                .clickable(actionStartActivity(Intent(LocalContext.current, MainActivity::class.java).apply {
+                    putExtra("selected_year", date.year)
+                    putExtra("selected_month", date.month)
+                    putExtra("selected_day", date.dayOfMonth)
+                }))
                 .padding(2.dp),
             contentAlignment = Alignment.TopStart
         ) {
