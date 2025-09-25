@@ -125,7 +125,7 @@ private fun DayCellContent(
                             text = event.getTruncatedTitle(8),
                             style = TextStyle(
                                 color = ColorProvider(Color(0xFFBDBDBD)),
-                                fontSize = 8.sp,
+                                fontSize = 10.sp,
                                 fontWeight = FontWeight.Normal
                             ),
                             maxLines = 1

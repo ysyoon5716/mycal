@@ -5,7 +5,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.mycal.domain.model.CalendarDate
 import com.example.mycal.domain.model.CalendarEvent
-import com.example.mycal.domain.model.CalendarViewMode
 import com.example.mycal.domain.usecase.GetMonthEventsUseCase
 import com.example.mycal.data.local.dao.EventDao
 import com.example.mycal.domain.event.SyncEventManager
@@ -188,10 +187,6 @@ class CalendarViewModel @Inject constructor(
         }
 
         return selectedEvents
-    }
-
-    fun onViewModeChanged(mode: CalendarViewMode) {
-        _uiState.update { it.copy(viewMode = mode) }
     }
 
     fun onMonthChanged(yearMonth: YearMonth) {
