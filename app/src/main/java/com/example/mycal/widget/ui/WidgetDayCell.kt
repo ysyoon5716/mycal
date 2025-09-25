@@ -20,6 +20,10 @@ import androidx.glance.text.TextStyle
 import com.example.mycal.MainActivity
 import com.example.mycal.widget.model.WidgetCalendarDate
 
+// Maximum number of events to display per day cell
+// Increase this value to test UI with more events
+private const val MAX_EVENTS_PER_DAY = 4
+
 @Composable
 fun WidgetDayCell(
     date: WidgetCalendarDate,
@@ -107,7 +111,7 @@ private fun DayCellContent(
         // Events list
         if (date.hasEvents) {
             Spacer(GlanceModifier.height(1.dp))
-            val displayEvents = date.getDisplayEvents(2)
+            val displayEvents = date.getDisplayEvents(MAX_EVENTS_PER_DAY)
 
             Column(
                 modifier = GlanceModifier.fillMaxWidth(),
@@ -142,9 +146,9 @@ private fun DayCellContent(
                 }
 
                 // More events indicator
-                if (date.hasMoreEvents(2)) {
+                if (date.hasMoreEvents(MAX_EVENTS_PER_DAY)) {
                     Text(
-                        text = "+${date.getMoreEventsCount(2)}",
+                        text = "+${date.getMoreEventsCount(MAX_EVENTS_PER_DAY)}",
                         style = TextStyle(
                             color = ColorProvider(Color(0xFF9E9E9E)),
                             fontSize = 8.sp,
