@@ -6,7 +6,6 @@
 ## 기술스택
 - Kotlin
 - Jetpack Compose
-- Glance API (위젯)
 - Hilt (DI)
 - Room Database
 - Retrofit & OkHttp
@@ -17,7 +16,6 @@
 ## 기능
 - 달력 뷰어 (월별 보기)
 - ICS 달력 구독 (URL 기반)
-- 달력 위젯 (Small, Medium, Large)
 - 자동 동기화 (15분 간격)
 - 다중 캘린더 소스 지원
 - 커스텀 색상 선택
@@ -121,9 +119,6 @@ com.example.mycal/
 │   │   ├── calendar/       # 달력 화면
 │   │   └── subscription/   # 구독 관리 화면
 │   └── theme/              # Theme 설정
-├── widget/                 # Glance Widget
-│   ├── state/              # Widget State
-│   └── ui/                 # Widget UI Components
 ├── di/                     # Hilt Modules
 ├── MainActivity.kt
 └── MyCalApplication.kt
@@ -147,12 +142,6 @@ com.example.mycal/
 - **CalendarSyncWorker**: WorkManager Worker (15분 주기)
 - **CalendarSyncManager**: 동기화 관리
 
-#### Widget
-- **CalendarWidget**: GlanceAppWidget 구현
-- **CalendarWidgetReceiver**: Widget BroadcastReceiver
-- **CalendarWidgetWorker**: Widget 업데이트 Worker
-- **CalendarWidgetDataProvider**: Widget 데이터 제공
-
 #### DI Modules
 - **DatabaseModule**: Room Database 제공
 - **NetworkModule**: Retrofit, OkHttp 제공
@@ -165,12 +154,6 @@ com.example.mycal/
 - 날짜/시간 파싱 시 타임존 주의
 - All-day 이벤트와 시간 이벤트 구분 처리
 - RRULE (반복 규칙) 처리는 미구현 상태
-
-### Widget 개발
-- Glance API는 Compose와 유사하나 제한적
-- Widget 크기별로 다른 UI 제공 (Small/Medium/Large)
-- Widget 업데이트는 WorkManager 사용
-- 클릭 이벤트는 PendingIntent로 처리
 
 ### 동기화
 - WorkManager로 15분 주기 백그라운드 동기화
@@ -195,11 +178,6 @@ com.example.mycal/
 - 인코딩 문제: UTF-8 확인
 - 날짜 형식: DATE vs DATE-TIME 구분
 - 타임존: TZID 처리
-
-### Widget 업데이트 안됨
-- GlanceAppWidgetManager.update() 호출 확인
-- WorkManager 제약 조건 확인
-- Widget Provider 등록 확인
 
 ### 동기화 실패
 - 네트워크 권한 확인

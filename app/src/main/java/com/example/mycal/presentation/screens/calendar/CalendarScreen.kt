@@ -34,21 +34,11 @@ import java.util.Locale
 @Composable
 fun CalendarScreen(
     modifier: Modifier = Modifier,
-    initialSelectedDate: LocalDate? = null,
     onNavigateToSubscriptions: () -> Unit = {},
-    onDateHandled: () -> Unit = {},
     viewModel: CalendarViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val selectedDateEvents by viewModel.selectedDateEvents.collectAsStateWithLifecycle()
-
-    // Handle initial selected date from widget
-    LaunchedEffect(initialSelectedDate) {
-        initialSelectedDate?.let {
-            viewModel.onDateSelected(it)
-            onDateHandled()
-        }
-    }
 
     Scaffold(
         modifier = modifier,

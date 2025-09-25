@@ -15,7 +15,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.navigation.compose.NavHost
@@ -25,9 +24,6 @@ import com.example.mycal.presentation.screens.calendar.CalendarScreen
 import com.example.mycal.presentation.screens.subscription.SubscriptionListScreen
 import com.example.mycal.presentation.theme.MyCalTheme
 import dagger.hilt.android.AndroidEntryPoint
-import org.threeten.bp.Instant
-import org.threeten.bp.LocalDate
-import org.threeten.bp.ZoneId
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -35,23 +31,13 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        // Extract date from intent if available
-        val selectedDateMillis = intent.getLongExtra("selected_date", 0L)
-        val selectedDate = if (selectedDateMillis > 0) {
-            Instant.ofEpochMilli(selectedDateMillis)
-                .atZone(ZoneId.systemDefault())
-                .toLocalDate()
-        } else {
-            null
-        }
-
         setContent {
             MyCalTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    CalendarApp(initialSelectedDate = selectedDate)
+                    CalendarApp()
                 }
             }
         }
@@ -59,9 +45,8 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun CalendarApp(initialSelectedDate: LocalDate? = null) {
+fun CalendarApp() {
     val navController = rememberNavController()
-    var pendingSelectedDate by remember { mutableStateOf(initialSelectedDate) }
 
     NavHost(
         navController = navController,
@@ -70,12 +55,8 @@ fun CalendarApp(initialSelectedDate: LocalDate? = null) {
         composable("calendar") {
             CalendarScreen(
                 modifier = Modifier.fillMaxSize(),
-                initialSelectedDate = pendingSelectedDate,
                 onNavigateToSubscriptions = {
                     navController.navigate("subscriptions")
-                },
-                onDateHandled = {
-                    pendingSelectedDate = null
                 }
             )
         }
