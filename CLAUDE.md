@@ -3,6 +3,12 @@
 ## Overview
 Android Calendar Application with Widget Support
 
+## Recent Updates
+- **2025-01-25**: Added widget day cell click navigation - tap any day in widget to open app with that date selected
+- **2025-01-25**: Fixed MonthView to properly display target month when opening from widget
+- **2025-01-24**: Simplified to month-only view, removed week/day view modes
+- **2025-01-24**: Updated widget with iOS-style navigation arrows and improved layout
+
 ## Technology Stack
 - Kotlin
 - Jetpack Compose
@@ -16,16 +22,22 @@ Android Calendar Application with Widget Support
 
 ## Functions
 - Calendar Viewer
+    - Month-only view (removed week/day views for simplicity)
+    - Swipe navigation between months
+    - Selected date event list display
+    - Today button for quick navigation
 - ICS Calendar Subscription
     - URL Based Subscription
     - Automatic Sync (15min)
     - Multiple Subscription
+    - Manual subscription management
 - Month Calendar Widget
     - Full month view (7x6 grid)
     - Event titles display (up to 2 per day)
-    - Month navigation
+    - Month navigation with iOS-style arrow icons
     - Dark theme
     - Auto-updates after sync
+    - **Click day cell to open app with selected date** (NEW)
 
 
 ## Info
@@ -203,6 +215,10 @@ com.example.mycal/
   - Manual navigation between months
 - Use LocalContext.current for accessing context in Glance composables
 - Widget size: minWidth="250dp" minHeight="250dp" for proper month view
+- **Widget-to-App Navigation**: Day cells pass date via Intent extras (year, month, day)
+  - MainActivity extracts date from Intent and passes to CalendarApp
+  - CalendarScreen receives initialDate and calls viewModel.setInitialDate()
+  - ViewModel navigates to correct month and selects the date
 
 ### Synchronization
 - Background sync every 15 minutes using WorkManager
@@ -220,6 +236,11 @@ com.example.mycal/
 - Proper use of remember/rememberSaveable
 - State management with state hoisting
 - Screen navigation with Navigation Compose
+- **MonthViewWithSwipe**: Fixed reference month for consistent pager calculations
+  - Uses centerPage (100000) as reference point
+  - Calculates page offset based on months difference
+  - LaunchedEffect syncs pager position when currentMonth changes
+  - Supports both swipe navigation and programmatic month changes
 
 ## Common Issues and Solutions
 
